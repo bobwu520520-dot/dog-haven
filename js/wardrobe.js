@@ -62,11 +62,11 @@ class WardrobeManager {
   buyCoatColor(dogId, coatId) {
     const coat = this.findCoatColor(coatId);
     if (!coat) return { success: false, msg: '毛色不存在' };
-    if (this.isCoatOwned(coatId)) return { success: false, msg: '已经拥有这款毛色啦！' };
     // 传说变体专属毛色不可购买，只能通过钻石抽卡获得
     if (coat.costType === 'legendary') {
       return { success: false, msg: '这款传说毛色只能通过抽卡获得哦！' };
     }
+    if (this.isCoatOwned(coatId)) return { success: false, msg: '已经拥有这款毛色啦！' };
 
     if (coat.costType === 'gold') {
       if (!this.economy.spendGold(coat.cost)) return { success: false, msg: '金币不足哦！' };
