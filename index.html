@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>《金毛和汤 🍲》- 治愈系狗狗料理放置经营手游</title>
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- 竖屏游戏主容器 (桌面端带手机精致边框，移动端全面屏) -->
+  <div id="app-container">
+    <div id="mobile-frame">
+
+      <!-- 顶部 HUD 资产与状态栏 -->
+      <header id="game-header">
+        <div class="hud-left">
+          <div class="currency-pill gold-pill" title="金币：用于升级设施与招募狗狗">
+            <span class="currency-icon">🪙</span>
+            <span id="hud-gold" class="currency-value">100</span>
+          </div>
+          <div class="currency-pill bone-pill" title="骨头：用于抽取服装与特殊加速">
+            <span class="currency-icon">🦴</span>
+            <span id="hud-bones" class="currency-value">20</span>
+          </div>
+          <div class="currency-pill diamond-pill" title="钻石：稀缺货币，用于抽取稀有犬种与传说变体">
+            <span class="currency-icon">💎</span>
+            <span id="hud-diamonds" class="currency-value">60</span>
+          </div>
+        </div>
+
+        <div class="hud-right">
+          <div class="rate-pill" title="小镇每秒金币营业额">
+            <span id="hud-gps">5.0 🪙/秒</span>
+          </div>
+          <div id="hud-boost-timer" class="boost-badge hidden">⚡ 2倍加速中</div>
+          <div id="hud-weather-pill" class="weather-pill" title="阳光公园动态天气（点击切换：☀️晴天 / 🌧️小雨 / ❄️初雪）">
+            <span id="hud-weather-icon">☀️</span>
+            <span id="hud-weather-name">暖阳</span>
+          </div>
+          <button id="btn-throw-frisbee" class="icon-btn" title="投掷飞盘！小狗全速奔跑凌空截咬！">🥏</button>
+          <button id="btn-park-walk" class="icon-btn" title="公园散步！与狗狗结伴巡游阳光公园小径，带回伴手礼">🚶</button>
+          <button id="btn-water-fetch" class="icon-btn" title="水里捡球！向戏水池投球，狗狗纵身入水叼回（水性犬加成）">🎾</button>
+          <button id="btn-dogpedia" class="icon-btn" title="国民犬种图鉴与5大料理 (Dogpedia)">📖</button>
+          <button id="btn-reset-game" class="icon-btn" title="重新开业 (以金毛炖汤主厨从头开荒)">🔄</button>
+          <button id="btn-audio-toggle" class="icon-btn" title="音乐与ASMR音效">🎵</button>
+          <button id="btn-help" class="icon-btn" title="小镇指南与GDD文档">❓</button>
+        </div>
+      </header>
+
+      <!-- 核心画布区域 (森林草地 + 6大圆形营地 + 底部出餐木托盘) -->
+      <main id="canvas-wrapper">
+        <!-- 顶部悬浮小镇阶段与核心放置循环指引栏 -->
+        <div id="town-loop-bar" class="town-loop-bar">
+          <div class="town-stage-pill" id="town-stage-pill" title="小镇演化等级与阶段">
+            <span id="town-stage-icon">🌳</span>
+            <span id="town-stage-name">Lv.1 🌳 小森林</span>
+          </div>
+          <div class="loop-objective-pill" id="loop-objective-pill" title="点击立即前往当前核心循环任务">
+            <span class="loop-pulse-dot"></span>
+            <span id="loop-objective-text">🍲 升级鲜美炖汤锅 (Lv.1/5)</span>
+          </div>
+          <button id="btn-town-expand" class="btn-town-expand locked" title="达到等级要求后升级并扩张小镇！">
+            <span class="expand-icon">🏡</span>
+            <span class="expand-text">小镇升级</span>
+            <span id="town-expand-badge" class="expand-badge hidden">READY!</span>
+          </button>
+        </div>
+
+        <canvas id="game-canvas"></canvas>
+      </main>
+
+      <!-- 底部主导航标签栏 -->
+      <nav id="bottom-nav">
+        <button class="nav-tab active" data-tab="facilities">
+          <span class="nav-icon">🏡</span>
+          <span class="nav-label">料理工位</span>
+        </button>
+        <button class="nav-tab" data-tab="dogs">
+          <span class="nav-icon">🐕</span>
+          <span class="nav-label">小镇居民</span>
+        </button>
+        <button class="nav-tab" data-tab="dogpedia">
+          <span class="nav-icon">📖</span>
+          <span class="nav-label">犬种图鉴</span>
+        </button>
+        <button class="nav-tab" data-tab="wardrobe">
+          <span class="nav-icon">🎩</span>
+          <span class="nav-label">换装衣橱</span>
+        </button>
+        <button class="nav-tab" data-tab="tasks">
+          <span class="nav-icon">📜</span>
+          <span class="nav-label">小镇日常</span>
+        </button>
+        <button class="nav-tab" data-tab="market">
+          <span class="nav-icon">🛍️</span>
+          <span class="nav-label">集市盲盒</span>
+        </button>
+      </nav>
+
+    </div>
+  </div>
+
+  <!-- ==================== 模态弹窗区 ==================== -->
+
+  <!-- 1. 单个设施详情与升级弹窗 -->
+  <div id="station-detail-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="station-modal-title">🍲 大铁锅熬汤营地 (Lv.1)</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="station-modal-dog" class="info-banner">当前主厨：暖心金毛</div>
+        <div id="station-modal-autocollect" class="status-banner"></div>
+        <div class="section-title">三阶菜品解锁进度</div>
+        <div id="station-modal-dishes" class="dishes-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-station-upgrade" class="btn btn-primary btn-block">升级到 Lv.2</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 设施全列表弹窗 -->
+  <div id="facilities-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🍳 5 大料理工位管理</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tip">💡 提示：料理工位升到 20 级可解锁全自动收取金币，无需手动点击！</div>
+        <div id="facilities-list-container" class="scroll-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 狗狗档案与互动抚摸弹窗 -->
+  <div id="dog-profile-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="dog-modal-name">金毛 - 暖心主厨</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="dog-profile-top">
+          <div id="dog-modal-avatar" class="large-avatar">🦮</div>
+          <div class="dog-profile-meta">
+            <div id="dog-modal-desc" class="dog-personality">温顺体贴，最懂熬汤的治愈系暖心大金毛</div>
+            <div id="dog-modal-affection-level" class="affection-title">好感度 Lv.1 / 10</div>
+            <div class="exp-bar-container">
+              <div id="dog-modal-exp-bar" class="exp-bar-fill"></div>
+            </div>
+            <div id="dog-modal-exp-text" class="exp-text">0 / 100 EXP</div>
+          </div>
+        </div>
+
+        <div id="dog-modal-skill" class="skill-box"></div>
+
+        <!-- 体力值显示 -->
+        <div class="stamina-box">
+          <div class="stamina-header" style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:4px;">
+            <span>⚡ 体力值: <b id="dog-modal-stamina-text">100 / 100</b></span>
+            <span id="dog-modal-stamina-state" class="badge badge-success">精力充沛</span>
+          </div>
+          <div class="exp-bar-container">
+            <div id="dog-modal-stamina-bar" class="stamina-bar-fill" style="width:100%; height:100%; background:linear-gradient(90deg, #2ECC71, #27AE60); border-radius:5px; transition:width 0.3s ease;"></div>
+          </div>
+          <div class="stamina-tip" style="font-size:10px; color:#7F8C8D; margin-top:3px;">💡 在岗烹饪每秒消耗体力，在右侧乐园玩耍/休息每秒恢复+2.5体力</div>
+        </div>
+
+        <div class="section-title">调配岗位</div>
+        <select id="dog-modal-station-select" class="form-select"></select>
+
+        <div class="section-title">互动与喂食</div>
+        <div class="interaction-buttons">
+          <button id="btn-dog-pet" class="btn btn-pink">♥ 抚摸小狗 (+5好感, CD 30s)</button>
+          <button id="btn-dog-feed" class="btn btn-warning">🥩 喂食肉干 (+30好感)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 8大狗狗员工全名册 -->
+  <div id="dogs-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🐶 汪汪员工全名册 (10大犬种)</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-tip">💡 提示：全局技能狗狗（金毛、哈士奇、边牧）无论在岗还是在休息区都生效！</div>
+        <div id="dogs-roster-container" class="scroll-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 换装衣橱弹窗 -->
+  <div id="wardrobe-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🎩 狗狗换装衣橱 (30套外观 + 23款毛色)</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="wardrobe-target-row">
+          <span>当前换装狗狗：</span>
+          <select id="wardrobe-dog-select" class="form-select-sm"></select>
+        </div>
+        <div id="wardrobe-tabs" class="sub-tabs">
+          <button class="sub-tab active" data-cat="hat">帽子 (10)</button>
+          <button class="sub-tab" data-cat="cloth">衣服 (10)</button>
+          <button class="sub-tab" data-cat="acc">配饰 (10)</button>
+          <button class="sub-tab" data-cat="coat">毛色 (23)</button>
+        </div>
+        <div id="wardrobe-items-container" class="items-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. 每日任务与成就弹窗 -->
+  <div id="tasks-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📜 每日任务与成就</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="section-title">每日任务 (每日 00:00 刷新)</div>
+        <div id="daily-tasks-list" class="tasks-container"></div>
+        <div class="section-title" style="margin-top:16px;">永久成就</div>
+        <div id="achievements-list" class="tasks-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. 集市与盲盒抽卡弹窗 -->
+  <div id="market-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🛍️ 小馆集市与盲盒机</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- GDD 2.1 犬种抽取 -->
+        <div class="market-box gacha-box" style="border:2px solid #7EC8E3; background:linear-gradient(180deg,#F0F9FF 0%,#FFFFFF 100%);">
+          <div class="market-title">🐶 犬种召唤 · 钻石抽取</div>
+          <div class="market-desc">
+            抽取全 10 个犬种与<b>传说稀有变体</b>（晴天金毛 / 雪原哈士奇，附带发光专属毛色与第二重天赋）。<br>
+            抽到重复卡将按稀有度返还钻石。
+          </div>
+          <div style="font-size:12px; color:#2C3E50; background:#EAF6FD; border-radius:8px; padding:6px 8px; margin-bottom:8px; line-height:1.6;">
+            🎯 保底进度：<b><span id="gacha-pity-legendary">80</span></b> 抽内必出传说 ｜
+            <b><span id="gacha-pity-epic">30</span></b> 抽内必出史诗 ｜
+            <b><span id="gacha-pity-rare">10</span></b> 抽内必出稀有<br>
+            累计已抽 <b><span id="gacha-total-draws">0</span></b> 次
+          </div>
+          <div class="gacha-actions">
+            <button id="btn-dog-gacha-single" class="btn btn-primary">单抽 (💎 60)</button>
+            <button id="btn-dog-gacha-ten" class="btn btn-success">十连抽 (💎 540 9折)</button>
+          </div>
+        </div>
+
+        <!-- 盲盒抽取 -->
+        <div class="market-box gacha-box">
+          <div class="market-title">🎁 服装限定盲盒机</div>
+          <div class="market-desc">抽取专属帽子、衣服与配饰！首次穿戴增加 50 好感度，重复抽取返还骨头与肉干！</div>
+          <div class="gacha-actions">
+            <button id="btn-gacha-single" class="btn btn-bone">单抽 (🦴 10)</button>
+            <button id="btn-gacha-ten" class="btn btn-primary">十连抽 (🦴 90 9折)</button>
+          </div>
+        </div>
+
+        <!-- 道具补给 -->
+        <div class="market-box">
+          <div class="market-title">🥩 美味肉干零食包</div>
+          <div class="market-desc">投喂狗狗直接增加 30 点好感度，快速提升技能倍率！</div>
+          <button id="btn-buy-snack" class="btn btn-warning btn-block">购买 1 包肉干 (🪙 1,500 金币)</button>
+        </div>
+
+        <!-- 激励加速 -->
+        <div class="market-box">
+          <div class="market-title">📺 经营助力与福利</div>
+          <div class="ad-actions">
+            <button id="btn-ad-speed" class="btn btn-success btn-block" style="margin-bottom:8px;">
+              ⚡ 2分钟全馆双倍制作加速 (模拟看广告)
+            </button>
+            <button id="btn-ad-bones" class="btn btn-outline btn-block">
+              🦴 免费领取 5 骨头 (每日可看3次)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. 盲盒抽取结果展示弹窗 -->
+  <div id="gacha-result-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="text-align:center;">
+      <div class="modal-header">
+        <h3>🎉 盲盒抽取结果</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="gacha-cards-container" class="gacha-grid"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary btn-block modal-close">太棒啦！收下服装</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. 欢迎回来·小院木栅门守候与离线收益欢迎仪式 -->
+  <div id="offline-modal" class="modal-overlay hidden">
+    <div class="modal-card welcome-gate-card">
+      <div class="modal-header">
+        <h3 id="welcome-modal-title">🏡 金毛在小院木门等您回家！</h3>
+      </div>
+      <div class="modal-body" style="text-align:center;">
+        <div class="welcome-gate-stage">
+          <div class="gate-wood-fence">🪵 阳光小院木门</div>
+          <div class="welcome-dog-anim">
+            <div id="welcome-gate-dog-icon" class="dog-bounce-body">🐕</div>
+            <div class="welcome-sparkles">✨💖✨</div>
+          </div>
+          <div class="gate-treasure-box">🎁</div>
+        </div>
+
+        <div class="welcome-quote-bubble">
+          <p id="welcome-gate-quote">“汪！主人您终于推开院门回来啦！我一直在门口守着，尾巴摇得像螺旋桨，这是大家一起煮好的热腾腾料理收益！”</p>
+        </div>
+
+        <div class="offline-stats-box">
+          <div class="stat-row">
+            <span>守候等待时长：</span>
+            <b id="offline-time-text">0秒</b>
+          </div>
+          <div class="stat-row">
+            <span>收益上限：</span>
+            <b id="offline-limit-text">8小时</b>
+          </div>
+          <div class="stat-row">
+            <span>小院烹饪产速：</span>
+            <b id="offline-rate-text">5 🪙/秒</b>
+          </div>
+        </div>
+
+        <div class="offline-claim-buttons">
+          <button id="btn-claim-offline-double" class="btn btn-success btn-block" style="margin-bottom:10px; font-size:16px;">
+            📺 摸头互动·双倍领取 (<span id="offline-gold-double">+0</span>)
+          </button>
+          <button id="btn-claim-offline-normal" class="btn btn-outline btn-block">
+            普通领取 (<span id="offline-gold-normal">+0</span>)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 11. 国民犬种图鉴 (Dogpedia) & 5大狗狗专属料理弹窗 -->
+  <div id="dogpedia-modal" class="modal-overlay hidden">
+    <div class="modal-card dogpedia-card">
+      <div class="modal-header">
+        <h3>🐾 国民犬种图鉴 & 狗狗专属料理</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- 顶部标签切换：犬种图鉴 VS 5大料理 -->
+        <div style="display:flex; gap:8px; margin-bottom:12px; border-bottom:1.5px solid #EAEDED; padding-bottom:8px;">
+          <button id="btn-tab-dogpedia-dogs" class="btn btn-primary btn-sm" style="flex:1; font-weight:800;">🐕 国民犬种 (10/10)</button>
+          <button id="btn-tab-dogpedia-cuisines" class="btn btn-outline btn-sm" style="flex:1; font-weight:800;">🍲 5大狗狗料理 (15道)</button>
+        </div>
+
+        <!-- 子面板 1: 8大国民犬种 -->
+        <div id="tab-dogpedia-dogs-content">
+          <div id="dogpedia-list-container" class="dogpedia-grid"></div>
+        </div>
+
+        <!-- 子面板 2: 5大狗狗料理 -->
+        <div id="tab-dogpedia-cuisines-content" class="hidden">
+          <div id="dogpedia-cuisines-container" class="cuisines-grid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. 森林小镇开荒扩张仪式弹窗 -->
+  <div id="town-expansion-modal" class="modal-overlay hidden">
+    <div class="modal-card town-expansion-card" style="text-align:center;">
+      <div class="modal-header">
+        <h3 id="expansion-modal-title">🎉 森林小镇繁荣扩张！</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="expansion-stage-icon" style="font-size: 48px; margin: 6px 0; filter: drop-shadow(0 4px 10px rgba(46,125,50,0.3));">🌲</div>
+        <h2 id="expansion-stage-name" style="color:#2E7D32; font-size: 19px; font-weight: 800; margin-bottom: 6px;">扩张·溪流林苑</h2>
+        <p id="expansion-stage-desc" style="color:#5D4037; font-size: 13px; line-height: 1.5; margin-bottom: 12px;"></p>
+        
+        <div class="expansion-rewards-box" style="background:#F9FBE7; border:1.5px solid #DCEDC8; border-radius:14px; padding:12px 14px; margin-bottom:14px; text-align:left;">
+          <div style="font-weight:bold; color:#33691E; font-size:13px; margin-bottom:6px;">✨ 新解锁林区与福利：</div>
+          <div id="expansion-unlocks-list" style="font-size:12px; color:#558B2F; line-height:1.7;"></div>
+          <div style="margin-top:8px; font-weight:bold; color:#E65100; font-size:13px;">🦴 赠送开荒荣誉骨头: +<span id="expansion-reward-bones">20</span> 根！</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-confirm-expansion" class="btn btn-success btn-block" style="font-size:15px; padding:12px; font-weight:bold; box-shadow:0 4px 12px rgba(46,125,50,0.35);">🌟 开启全新林地奇遇！</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 10. GDD游戏设计与玩法说明手册 -->
+  <div id="help-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📖 《金毛和汤 🍲》经营指南与 GDD</h3>
+        <button class="modal-close">×</button>
+      </div>
+      <div class="modal-body scroll-list" style="font-size:13px; line-height:1.6; color:#34495E;">
+        <h4 style="color:#D35400;">1. 核心经营闭环 🐾</h4>
+        <p>🐶 狗狗切食材 🔪 → 🍲 丢进料理工位烹饪 → 🪙 料理卖出换金币 → ⬆️ 升级工位 / 升级食谱 → 📈 单位产出更高 → 🐕 快速解锁新犬种、新毛色、新装饰、新地块 → 循环不断繁荣！</p>
+
+        <h4 style="color:#D35400; margin-top:12px;">2. 阳光公园与小镇5大演化等级 🌟</h4>
+        <p>场景主题为<b>「阳光公园 · 汪汪小馆后院」</b>：草坪、木栅门、中央音乐喷泉与四时天气轮转。随着设施等级提升，公园会依次扩张为 5 大形态：<br>
+          <b>Lv.1 🌳 小森林</b>：金毛守在大铁锅旁文火慢熬，端出小镇第一碗鲜美炖汤。<br>
+          <b>Lv.5 🏡 狗狗村</b>：柴犬架起纯炭火烤炉，焦香四溢的慢烤烧烤引来全镇排队。<br>
+          <b>Lv.15 🏘️ 狗狗小镇</b>：萨摩耶的甜品烘焙屋飘满曲奇与舒芙蕾香气。<br>
+          <b>Lv.30 🌆 狗狗城市</b>：边牧掌勺的寿喜火锅台热气腾腾。<br>
+          <b>Lv.50 🏝️ 狗狗度假岛</b>：哈士奇的风干窖开张，5 大料理工位齐聚热带海岛！
+        </p>
+
+        <h4 style="color:#D35400; margin-top:12px;">3. 5 大料理工位与食谱升级 📜</h4>
+        <p>
+          🍲 <b>鲜美炖汤</b>（小镇 Lv.1 解锁）· 🍢 <b>慢烤烧烤</b>（Lv.5）· 🧁 <b>甜品烘焙</b>（Lv.15）· 🫕 <b>狗狗火锅</b>（Lv.30）· 🥩 <b>肉干零食</b>（Lv.50）。<br>
+          每个菜系拥有独立<b>食谱等级（Lv.1~10）</b>，在【犬种图鉴 → 5大狗狗料理】页签中消耗金币升级，每级为对应料理工位带来 <b>+8% 售价加成</b>；5 大食谱全部满级额外获得 <b>+10% 全镇产速</b>。
+        </p>
+
+        <h4 style="color:#D35400; margin-top:12px;">4. 狗狗主厨与专属职业 🐕</h4>
+        <p>
+          🍲 <b>金毛·炖汤主厨</b>：<code>🥕 → 🐕 → 🍲</code> 守灶文火慢炖，鲜美炖汤锅售价 +15%。<br>
+          🍢 <b>柴犬·烧烤主厨</b>：<code>🔥 → 🐕 → 🍢</code> 炭火翻烤手法快如残影，慢烤烧烤架售价 +15%。<br>
+          🧁 <b>萨摩耶·甜品主厨</b>：<code>🍪 🧁 🍰 ↑ 🐕</code> 挤奶油手速惊人，甜品烘焙屋产速 +20%。<br>
+          🥩 <b>哈士奇·风干主厨</b>：<code>🥓 🐟 🦴 ↑ 🐕</code> 翻晾肉干，全镇产速 +12%，干活认真偶尔跑偏(撞翻晾肉架)！<br>
+          🫕 <b>边牧·火锅领班</b>：<code>🥩 🫕 ↑ 🐕</code> 掌控汤底火候分秒不差，火锅台产速 +20%，全局售价 +20%。<br>
+          🐾 <b>柯基·金牌跑堂</b>：叼着木托盘满镇飞奔，全镇金币自动收取间隔 −30%！
+        </p>
+
+        <h4 style="color:#D35400; margin-top:12px;">5. 阳光公园四大迷你玩法 🎮</h4>
+        <p>
+          🥏 <b>接飞盘</b>：投掷飞盘，小狗全速飞奔凌空扑咬叼回（+15好感 +100🪙）。<br>
+          👃 <b>嗅闻寻宝</b>：狗狗嗅闻草地后狂热刨地，挖出黄金大骨 / 钱袋 / 肉干。<br>
+          🚶 <b>公园散步</b>：与狗狗结伴巡游公园小径，归来带回随机伴手礼（+12好感 +18体力）。<br>
+          🎾 <b>水里捡球</b>：向戏水池投球，狗狗纵身入水叼回；<b>水性犬种加成</b>（拉布拉多 ×1.6 / 金毛 ×1.35 / 萨摩耶 ×1.15）。
+        </p>
+
+        <h4 style="color:#D35400; margin-top:12px;">6. 中央音乐喷泉 ⛲</h4>
+        <p>位于公园正中央，水珠在微风中晶莹起舞。点击喷泉可向幸运泉心祈愿，飞溅璀璨金币与金色水花！</p>
+
+        <h4 style="color:#D35400; margin-top:12px;">7. 好感度、换装与毛色收集 🎨</h4>
+        <p>抚摸狗狗（+5好感，CD 30秒）、喂食肉干（+30好感）。每升1级好感，技能效果提升+10%！30套职业服饰首次穿戴赠送+50好感！<br>
+        收集三要素为 <b>犬种 × 毛色 × 饰品</b>：在【换装衣橱 → 毛色】页签中可用金币或骨头解锁 <b>23 款稀有毛色</b>（黑柴、稀有白柴、陨石蓝边牧、浓黑白二哈等），染色后狗狗形象实时更新。</p>
+
+        <div style="margin-top:20px; text-align:center; padding-top:12px; border-top:1px dashed #E0E0E0;">
+          <button id="btn-reset-game-modal" class="btn btn-block" style="background:#FFF3E0; border:1px solid #FFB74D; color:#E65100; font-weight:bold; font-size:13px; padding:10px;">
+            🔄 重新开业 (清空存档，以金毛炖汤主厨重新开荒)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 游戏底层 JS 依赖 -->
+  <script src="js/config.js"></script>
+  <script src="js/sprite.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/dog.js"></script>
+  <script src="js/kitchen.js"></script>
+  <script src="js/wardrobe.js"></script>
+  <script src="js/gacha.js"></script>
+  <script src="js/economy.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
