@@ -3458,13 +3458,57 @@ class DogChef {
     ctx.restore();
   }
 
+  // 获取头部装饰锚点（帽子/雨帽/工作帽等）
+  getHatAnchor() {
+    if (this.useSpriteRenderer() && this.spriteSupportsPose()) {
+      const hb = this._spriteHeadBounds();
+      if (hb) {
+        return { x: hb.cx, y: hb.minY };
+      }
+    }
+    let hy = -28;
+    if (this.isSitting) hy = -22;
+    else if (this.isCrouching) hy = -18;
+    return { x: 2, y: hy };
+  }
+
+  // 获取面部/颈部装饰锚点（眼镜/泡泡糖/围巾/领结等）
+  getFaceAnchor() {
+    if (this.useSpriteRenderer() && this.spriteSupportsPose()) {
+      const hb = this._spriteHeadBounds();
+      if (hb) {
+        return {
+          faceX: hb.cx,
+          faceY: hb.cy,
+          neckX: hb.cx - 8,
+          neckY: hb.cy + 14,
+          mouthX: hb.cx + 4,
+          mouthY: hb.cy + 6
+        };
+      }
+    }
+    let hy = -14;
+    if (this.isSitting) hy = -8;
+    else if (this.isCrouching) hy = -4;
+    return {
+      faceX: 1,
+      faceY: hy,
+      neckX: 0,
+      neckY: 0,
+      mouthX: 3,
+      mouthY: -9
+    };
+  }
+
   drawFrontAccessories(ctx) {
     const acc = this.equippedOutfits.acc;
+    const fa = this.getFaceAnchor();
     if (!acc) {
       // 动态天气效果：下雪天小狗自动系上暖心红围巾
       const isSnowy = window.currentGame && window.currentGame.currentWeather === 'snowy';
       if (isSnowy) {
         ctx.save();
+        ctx.translate(fa.neckX, fa.neckY);
         ctx.fillStyle = '#E74C3C';
         ctx.fillRect(-8, -4, 18, 6);
         ctx.beginPath();
@@ -3485,6 +3529,7 @@ class DogChef {
     ctx.save();
     if (acc.render === 'red_scarf') {
       // 鲜红小围巾
+      ctx.translate(fa.neckX, fa.neckY);
       ctx.fillStyle = '#E74C3C';
       ctx.fillRect(-8, -4, 18, 5);
       ctx.beginPath();
@@ -3495,6 +3540,7 @@ class DogChef {
       ctx.fill();
     } else if (acc.render === 'cool_sunglasses') {
       // 酷炫黑超墨镜
+      ctx.translate(fa.faceX - 1, fa.faceY - (-14));
       ctx.fillStyle = '#17202A';
       ctx.beginPath();
       ctx.roundRect(-10, -18, 10, 7, 2);
@@ -3508,6 +3554,7 @@ class DogChef {
       ctx.stroke();
     } else if (acc.render === 'round_glasses') {
       // 圆圆眼镜
+      ctx.translate(fa.faceX - 1, fa.faceY - (-14));
       ctx.strokeStyle = '#2C3E50';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -3520,12 +3567,14 @@ class DogChef {
       ctx.stroke();
     } else if (acc.render === 'bubble_gum') {
       // 粉色泡泡糖
+      ctx.translate(fa.mouthX - 3, fa.mouthY - (-9));
       ctx.fillStyle = 'rgba(255, 105, 180, 0.85)';
       ctx.beginPath();
       ctx.arc(3, -9, 6 + Math.sin(this.animTime * 4) * 1.5, 0, Math.PI * 2);
       ctx.fill();
     } else if (acc.render === 'red_bowtie') {
       // 红色小领结
+      ctx.translate(fa.neckX, fa.neckY);
       ctx.fillStyle = '#C0392B';
       ctx.beginPath();
       ctx.moveTo(-4, -1);
@@ -3539,12 +3588,13 @@ class DogChef {
 
   drawHat(ctx) {
     const hat = this.equippedOutfits.hat;
+    const ha = this.getHatAnchor();
     if (!hat) {
       // 动态天气效果：雨天未戴帽子的小狗自动戴上明黄色小雨帽
       const isRainy = window.currentGame && window.currentGame.currentWeather === 'rainy';
       if (isRainy) {
         ctx.save();
-        ctx.translate(2, -24);
+        ctx.translate(ha.x, ha.y + 4);
         ctx.fillStyle = '#F1C40F';
         ctx.beginPath();
         ctx.arc(0, 0, 16, Math.PI, 0);
@@ -3563,7 +3613,7 @@ class DogChef {
       // 若未佩戴时尚帽子且正在岗位工作，佩戴萌萌职业头饰/工作帽
       if (this.assignedFacility) {
         ctx.save();
-        ctx.translate(2, -26);
+        ctx.translate(ha.x, ha.y + 2);
         const st = this.assignedFacility;
         if (st === 'stew') {
           // 炖汤主厨：经典白色高筒厨师帽 + 汤勺小徽章
@@ -3659,7 +3709,7 @@ class DogChef {
     }
 
     ctx.save();
-    ctx.translate(2, -28);
+    ctx.translate(ha.x, ha.y);
 
     if (hat.render === 'chef_toque') {
       // 经典高筒大主厨帽

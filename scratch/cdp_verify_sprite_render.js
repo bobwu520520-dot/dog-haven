@@ -374,7 +374,7 @@ async function main() {
       const hb = d._spriteHeadBounds ? d._spriteHeadBounds() : null;
       const fb = d._spritePortraitBounds ? d._spritePortraitBounds() : null;
       out[id] = hb && fb
-        ? { head: +hb.w.toFixed(1), full: +fb.w.toFixed(1), ratio: +(hb.w / fb.w).toFixed(2) }
+        ? { head: +hb.w.toFixed(1), full: +fb.w.toFixed(1), ratio: +(hb.w / fb.w).toFixed(2), cx: +hb.cx.toFixed(1), cy: +hb.cy.toFixed(1), minY: +hb.minY.toFixed(1) }
         : null;
     }
     return out;
@@ -387,6 +387,11 @@ async function main() {
   check(hcTooBig.length === 0, '头部框明显小于全身框（确实裁到了头，而不是整只狗）',
     hcTooBig.length ? `偏大: ${hcTooBig.map((i) => i + ':' + headCrop[i].ratio).join(',')}`
                     : hcKeys.map((i) => `${i}:${headCrop[i] ? Math.round(headCrop[i].ratio * 100) + '%' : '-'}`).join(' '));
+  console.log('      逐只头部包围盒与定位 (cx, cy, minY):');
+  hcKeys.forEach(id => {
+    const h = headCrop[id];
+    console.log(`        ${id.padEnd(14)} cx=${h.cx} cy=${h.cy} minY=${h.minY}`);
+  });
 
   await evalJs('window.game.openTabModal("dogpedia")');
   await sleep(900);

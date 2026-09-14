@@ -1224,6 +1224,10 @@ class WangwangGame {
   showGachaResults(items) {
     const modal = document.getElementById('gacha-result-modal');
     const container = document.getElementById('gacha-cards-container');
+    const titleEl = modal.querySelector('.modal-header h3');
+    const footerBtn = modal.querySelector('.modal-footer .btn');
+    if (titleEl) titleEl.innerText = '🎉 盲盒抽取结果';
+    if (footerBtn) footerBtn.innerText = '太棒啦！收下服装';
     container.innerHTML = '';
 
     items.forEach(it => {
@@ -1602,34 +1606,52 @@ class WangwangGame {
     }
   }
 
-  // 绘制新手引导提示 (手指指向)
+  // 绘制新手引导提示 (手指指向与高亮提示胶囊)
   drawTutorial(ctx) {
     if (this.tutorialStep === 0) {
       // 引导收取底部出餐木托盘上的第一道美味佳肴
       const plate = this.kitchen.servingTray ? this.kitchen.servingTray.plates[0] : null;
       if (plate) {
-        const fingerY = plate.y - 40 + Math.sin(Date.now() / 150) * 8;
+        const fingerY = plate.y - 38 + Math.sin(Date.now() / 150) * 6;
         ctx.save();
-        ctx.font = '28px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '26px sans-serif';
         ctx.fillText('👇', plate.x, fingerY);
-        ctx.fillStyle = '#E74C3C';
+
+        const tipText = '第一步：点击底部木托盘出餐，收取金币！';
         ctx.font = 'bold 12px -apple-system, sans-serif';
-        ctx.fillText('第一步：点击底部木托盘出餐，收取金币！', plate.x + 80, fingerY + 20);
+        const tw = ctx.measureText(tipText).width;
+        const tipY = fingerY - 20;
+        ctx.fillStyle = 'rgba(231, 76, 60, 0.92)';
+        ctx.beginPath();
+        ctx.roundRect(plate.x + 80 - tw / 2 - 10, tipY - 12, tw + 20, 24, 12);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(tipText, plate.x + 80, tipY);
         ctx.restore();
       }
     } else if (this.tutorialStep === 1) {
       // 引导升级鲜美炖汤锅营地
       const stewpot = this.kitchen.stations.stew;
       if (stewpot) {
-        const fingerY = stewpot.y - stewpot.radius - 28 + Math.sin(Date.now() / 150) * 8;
+        const fingerY = stewpot.y - stewpot.radius - 22 + Math.sin(Date.now() / 150) * 6;
         ctx.save();
-        ctx.font = '28px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = '26px sans-serif';
         ctx.fillText('👇', stewpot.x, fingerY);
-        ctx.fillStyle = '#E74C3C';
+
+        const tipText = '第二步：点击鲜美炖汤锅升级，文火慢熬出好汤！';
         ctx.font = 'bold 12px -apple-system, sans-serif';
-        ctx.fillText('第二步：点击鲜美炖汤锅升级，文火慢熬出好汤！', stewpot.x + 100, fingerY + 20);
+        const tw = ctx.measureText(tipText).width;
+        const tipY = fingerY - 20;
+        ctx.fillStyle = 'rgba(231, 76, 60, 0.92)';
+        ctx.beginPath();
+        ctx.roundRect(stewpot.x + 80 - tw / 2 - 10, tipY - 12, tw + 20, 24, 12);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(tipText, stewpot.x + 80, tipY);
         ctx.restore();
       }
     }
