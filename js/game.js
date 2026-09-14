@@ -99,12 +99,17 @@ class WangwangGame {
     const modal = document.getElementById('offline-modal');
     if (!modal) return;
 
-    const timeStr = this.formatDuration(data.offlineSeconds);
+    const offlineSeconds = data ? (data.offlineSeconds ?? data.offlineSec ?? 0) : 0;
+    const maxHours = data ? (data.maxHours ?? (this.economy ? this.economy.getOfflineLimitHours() : 8)) : 8;
+    const goldPerSec = data ? (data.goldPerSec ?? (this.economy ? this.economy.calcGoldPerSecond() : 0)) : 0;
+    const earnedGold = data ? (data.earnedGold ?? 0) : 0;
+
+    const timeStr = this.formatDuration(offlineSeconds);
     document.getElementById('offline-time-text').innerText = timeStr;
-    document.getElementById('offline-limit-text').innerText = `${data.maxHours}小时`;
-    document.getElementById('offline-rate-text').innerText = `${data.goldPerSec} 🪙/秒`;
-    document.getElementById('offline-gold-normal').innerText = `+${data.earnedGold.toLocaleString()} 金币`;
-    document.getElementById('offline-gold-double').innerText = `+${(data.earnedGold * 2).toLocaleString()} 金币`;
+    document.getElementById('offline-limit-text').innerText = `${maxHours}小时`;
+    document.getElementById('offline-rate-text').innerText = `${goldPerSec} 🪙/秒`;
+    document.getElementById('offline-gold-normal').innerText = `+${earnedGold.toLocaleString()} 金币`;
+    document.getElementById('offline-gold-double').innerText = `+${(earnedGold * 2).toLocaleString()} 金币`;
 
     // 迎门守候仪式：金毛在木栅门守候并跳跃
     const golden = this.dogs.get('golden') || Array.from(this.dogs.values()).find(d => d.isOwned);
@@ -338,10 +343,40 @@ class WangwangGame {
     }
 
     // 关闭各类弹窗
+    const syncNavTabsState = () => {
+      const hasOpenModal = Array.from(document.querySelectorAll('.modal-overlay')).some(m => !m.classList.contains('hidden'));
+      if (!hasOpenModal) {
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+      }
+    };
+
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', () => {
-        btn.closest('.modal-overlay').classList.add('hidden');
+        const overlay = btn.closest('.modal-overlay');
+        if (overlay) overlay.classList.add('hidden');
+        syncNavTabsState();
       });
+    });
+
+    // 点击遮罩层空白处关闭弹窗
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.add('hidden');
+          syncNavTabsState();
+        }
+      });
+    });
+
+    // 键盘 ESC 键关闭弹窗
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const openModals = Array.from(document.querySelectorAll('.modal-overlay:not(.hidden)'));
+        if (openModals.length > 0) {
+          openModals[openModals.length - 1].classList.add('hidden');
+          syncNavTabsState();
+        }
+      }
     });
   }
 
@@ -486,7 +521,20 @@ class WangwangGame {
 
   // =================== 模态弹窗管理 ===================
 
+  closeAllModals() {
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+      modal.classList.add('hidden');
+    });
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+      btn.classList.remove('active');
+    });
+  }
+
   openTabModal(tab) {
+    this.closeAllModals();
+    const tabBtn = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
+    if (tabBtn) tabBtn.classList.add('active');
+
     if (tab === 'facilities') {
       this.renderFacilitiesList();
       this.openModal('facilities-modal');
@@ -709,7 +757,12 @@ class WangwangGame {
   // --- 狗狗档案与互动弹窗 ---
   openDogProfileModal(dogId) {
     const dog = this.dogs.get(dogId);
-    if (!dog || !dog.isOwned) return;
+    if (!dog) return;
+    if (!dog.isOwned) {
+      this.openTabModal('dogs');
+      this.showToast(`尚未招募【${dog.name}】，请先在居民名册中招募入驻！`);
+      return;
+    }
 
     this.selectedDogId = dogId;
     const modal = document.getElementById('dog-profile-modal');
@@ -979,7 +1032,7 @@ class WangwangGame {
         <div class="outfit-name">${item.name}</div>
         <div class="outfit-desc">${item.desc}</div>
         <div class="outfit-footer">
-          ${isEquipped ? '<span class="badge badge-success">穿戴中</span>' :
+          ${isEquipped ? `<button class="btn btn-sm btn-secondary btn-unequip-outfit" data-type="${item.type}">卸下</button>` :
             (isOwned ? `<button class="btn btn-sm btn-primary btn-equip" data-id="${item.id}">穿戴</button>` :
               `<button class="btn btn-sm btn-outline btn-buy-outfit" data-id="${item.id}">
                 ${item.costType === 'gold' ? `🪙${item.cost}` : `🦴${item.cost}`} 购买
@@ -989,6 +1042,15 @@ class WangwangGame {
         </div>
       `;
       itemsContainer.appendChild(card);
+    });
+
+    // 卸下
+    itemsContainer.querySelectorAll('.btn-unequip-outfit').forEach(btn => {
+      btn.onclick = () => {
+        this.wardrobe.unequipSlot(this.selectedDogId, btn.dataset.type);
+        this.renderWardrobeItems(cat);
+        this.showToast('已卸下服装！');
+      };
     });
 
     // 穿戴
@@ -1319,13 +1381,22 @@ class WangwangGame {
     if (!toast) {
       toast = document.createElement('div');
       toast.id = 'game-toast';
-      document.body.appendChild(toast);
+      const container = document.getElementById('mobile-frame') || document.body;
+      if (container && container.appendChild) container.appendChild(toast);
     }
-    toast.innerText = text;
-    toast.className = 'toast show';
-    setTimeout(() => {
-      toast.className = 'toast';
-    }, 2400);
+    if (toast) {
+      toast.innerText = text;
+      toast.className = 'toast show';
+    }
+    if (typeof clearTimeout !== 'undefined' && this._toastTimer) {
+      clearTimeout(this._toastTimer);
+    }
+    if (typeof setTimeout !== 'undefined') {
+      this._toastTimer = setTimeout(() => {
+        if (toast) toast.className = 'toast';
+        this._toastTimer = null;
+      }, 2400);
+    }
   }
 
   // =================== 主游戏循环 (60FPS) ===================
