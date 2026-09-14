@@ -209,7 +209,9 @@ class DogChef {
   // 全局移动倍率，作用于所有「走向目标点」的位移（散步、跑堂、回工位、玩耍…）。
   // 走 economy 汇总，因此多只带该天赋的犬种会叠加；不缓存以便招募后立即生效。
   getMoveSpeedMul() {
-    const eco = (typeof window !== 'undefined' && window.game) ? window.game.economy : null;
+    const eco = (typeof window !== 'undefined' && (window.game || window.currentGame))
+      ? (window.game || window.currentGame).economy
+      : (typeof global !== 'undefined' && (global.game || global.currentGame) ? (global.game || global.currentGame).economy : null);
     if (!eco || typeof eco.getPassiveBonus !== 'function') return 1;
     return 1 + eco.getPassiveBonus('move_speed');
   }
@@ -217,7 +219,9 @@ class DogChef {
   // GDD 2.1 天赋被动「快刀切配」（拉布拉多）：食材切块速度 +10%
   // 表现为切菜碎块生成间隔变短（节奏更快），不改变动作时长本身。
   getChopSpeedMul() {
-    const eco = (typeof window !== 'undefined' && window.game) ? window.game.economy : null;
+    const eco = (typeof window !== 'undefined' && (window.game || window.currentGame))
+      ? (window.game || window.currentGame).economy
+      : (typeof global !== 'undefined' && (global.game || global.currentGame) ? (global.game || global.currentGame).economy : null);
     if (!eco || typeof eco.getPassiveBonus !== 'function') return 1;
     return 1 + eco.getPassiveBonus('chop_speed');
   }
@@ -1238,10 +1242,13 @@ class DogChef {
           life: 1.6
         });
         this.addAffectionExp(15, 'frisbee_catch');
-        const gameEco = (window.game && window.game.economy) || (window.currentGame && window.currentGame.economy);
+        const gameEco = (typeof window !== 'undefined' && (window.game || window.currentGame))
+          ? (window.game || window.currentGame).economy
+          : (typeof global !== 'undefined' && (global.game || global.currentGame) ? (global.game || global.currentGame).economy : null);
         if (gameEco) {
-          gameEco.addGold(100);
-          if (Math.random() < 0.25) {
+          const mgMul = typeof gameEco.getMinigameMultiplier === 'function' ? gameEco.getMinigameMultiplier() : 1;
+          gameEco.addGold(Math.round(100 * mgMul));
+          if (Math.random() < 0.25 * mgMul) {
             gameEco.addBones(1);
           }
         }

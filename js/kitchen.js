@@ -1183,7 +1183,7 @@ class RestaurantKitchen {
   // 售出底部托盘某个盘位的菜品 (玩家点击或自动售出)
   sellTrayPlate(plateIndex, isManual = true) {
     const plate = this.servingTray.plates[plateIndex];
-    if (!plate || !plate.dish) return 0;
+    if (!plate || !plate.dish) return null;
 
     const dishInfo = plate.dish;
     const price = dishInfo.price;

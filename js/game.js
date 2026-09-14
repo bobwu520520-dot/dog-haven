@@ -456,9 +456,11 @@ class WangwangGame {
         if (dist <= plate.radius + 12 || onBubble) {
           if (plate.dish) {
             const res = this.kitchen.sellTrayPlate(i, true);
-            this.showToast(`售出【${res.name}】！营业金币 +${res.price.toLocaleString()} 🪙！`);
-            if (this.tutorialStep === 0) {
-              this.tutorialStep = 1; // 引导推进
+            if (res) {
+              this.showToast(`售出【${res.name}】！营业金币 +${res.price.toLocaleString()} 🪙！`);
+              if (this.tutorialStep === 0) {
+                this.tutorialStep = 1; // 引导推进
+              }
             }
             return;
           }
@@ -489,8 +491,11 @@ class WangwangGame {
           }
           // 点击未解锁营地 -> 尝试解锁
           if (this.economy.gold >= station.config.unlockCost) {
-            this.kitchen.unlockStation(station.id);
-            this.showToast(`🎉 成功解锁【${station.config.name}】！新营地就绪！`);
+            if (this.kitchen.unlockStation(station.id)) {
+              this.updateHUD();
+              this.saveGameData();
+              this.showToast(`🎉 成功解锁【${station.config.name}】！新营地就绪！`);
+            }
           } else {
             this.showToast(`金币不足！解锁【${station.config.name}】需要 ${station.config.unlockCost.toLocaleString()} 🪙`);
           }
@@ -728,6 +733,9 @@ class WangwangGame {
     btnUpgrade.disabled = this.economy.gold < cost || station.level >= 50;
     btnUpgrade.onclick = () => {
       if (this.kitchen.upgradeStation(stationId)) {
+        if (this.tutorialStep === 1 && stationId === 'stew') {
+          this.tutorialStep = 2; // 引导完成
+        }
         this.openStationModal(stationId); // 刷新
         this.updateHUD();
         this.saveGameData();
@@ -788,6 +796,9 @@ class WangwangGame {
       btn.onclick = () => {
         const id = btn.dataset.id;
         if (this.kitchen.upgradeStation(id)) {
+          if (this.tutorialStep === 1 && id === 'stew') {
+            this.tutorialStep = 2; // 引导完成
+          }
           this.renderFacilitiesList();
           this.updateHUD();
           this.saveGameData();
@@ -1241,6 +1252,7 @@ class WangwangGame {
   // --- 每日任务与成就 UI ---
   renderTasksUI() {
     this.economy.checkDailyReset();
+    this.economy.checkMilestones();
     const dailyContainer = document.getElementById('daily-tasks-list');
     const achContainer = document.getElementById('achievements-list');
 
@@ -1380,18 +1392,35 @@ class WangwangGame {
       }, 1000);
     };
 
-    btnAdBones.onclick = () => {
-      btnAdBones.innerText = '正在观看宣传广告...';
-      setTimeout(() => {
-        btnAdBones.innerText = '🦴 免费领取 5 骨头 (每日可看3次)';
-        this.economy.addBones(5);
-        this.economy.recordAction('watch_ad');
-        this.updateHUD();
-        this.saveGameData();
-        this.showToast('🎁 获得 5 根骨头！🦴');
-        if (window.wangwangAudio) window.wangwangAudio.playCoin();
-      }, 1000);
-    };
+    const maxBonesAds = 3;
+    const bonesWatched = this.economy.dailyAdBonesWatched || 0;
+    if (btnAdBones) {
+      if (bonesWatched >= maxBonesAds) {
+        btnAdBones.disabled = true;
+        btnAdBones.innerText = `🦴 今日免费骨头已领完 (${maxBonesAds}/${maxBonesAds})`;
+      } else {
+        btnAdBones.disabled = false;
+        btnAdBones.innerText = `🦴 免费领取 5 骨头 (今日还剩 ${maxBonesAds - bonesWatched} 次)`;
+      }
+
+      btnAdBones.onclick = () => {
+        if ((this.economy.dailyAdBonesWatched || 0) >= maxBonesAds) {
+          this.showToast('今日骨头奖励次数已用完，明天再来吧！');
+          return;
+        }
+        btnAdBones.innerText = '正在观看宣传广告...';
+        setTimeout(() => {
+          this.economy.dailyAdBonesWatched = (this.economy.dailyAdBonesWatched || 0) + 1;
+          this.economy.addBones(5);
+          this.economy.recordAction('watch_ad');
+          this.renderMarketUI();
+          this.updateHUD();
+          this.saveGameData();
+          this.showToast('🎁 获得 5 根骨头！🦴');
+          if (window.wangwangAudio) window.wangwangAudio.playCoin();
+        }, 1000);
+      };
+    }
   }
 
   // 展示盲盒抽取动画与卡片
@@ -1796,6 +1825,7 @@ class WangwangGame {
           if (res.success) {
             this.renderDogpediaModal();
             this.updateHUD();
+            this.saveGameData();
           }
         };
       });
@@ -1961,6 +1991,7 @@ class WangwangGame {
         dailyTaskProgress: this.economy.dailyTaskProgress,
         claimedTasks: Array.from(this.economy.claimedTasks),
         lastDailyResetDate: this.economy.lastDailyResetDate,
+        dailyAdBonesWatched: this.economy.dailyAdBonesWatched || 0,
         unlockedAchievements: Array.from(this.economy.unlockedAchievements),
         claimedAchievements: Array.from(this.economy.claimedAchievements),
         // GDD 2.1 抽卡状态：传说变体拥有 + 保底计数 + 统计
@@ -2010,6 +2041,9 @@ class WangwangGame {
       if (data.lastDailyResetDate) {
         this.economy.lastDailyResetDate = data.lastDailyResetDate;
       }
+      if (data.dailyAdBonesWatched !== undefined) {
+        this.economy.dailyAdBonesWatched = data.dailyAdBonesWatched;
+      }
       this.economy.checkDailyReset();
 
       // GDD 2.1 抽卡状态恢复（老存档缺字段时保持默认，不会清空）
@@ -2051,6 +2085,10 @@ class WangwangGame {
           this.kitchen.stations[k].unlocked = sData.unlocked;
           this.kitchen.stations[k].level = sData.level;
           this.kitchen.stations[k].assignedDogId = sData.assignedDogId;
+        }
+        // 若存档中炖汤锅等级已大于1，新手引导自动标记为已完成
+        if (this.tutorialStep < 2 && this.kitchen.stations.stew && this.kitchen.stations.stew.level > 1) {
+          this.tutorialStep = 2;
         }
       }
 

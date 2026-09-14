@@ -32,6 +32,9 @@ class WangwangEconomy {
     // 临时加速增益 (激励广告赠送 2 分钟双倍制作速度)
     this.speedBoostEndTime = 0;
 
+    // 每日观看广告免费领取骨头次数 (上限 3 次)
+    this.dailyAdBonesWatched = 0;
+
     // 狗狗数据引用 (由外部绑定)
     this.dogs = null; // Map<breedId, DogChef>
     this.kitchen = null; // RestaurantKitchen
@@ -676,6 +679,7 @@ class WangwangEconomy {
         watch_ad: 0
       };
       this.claimedTasks.clear();
+      this.dailyAdBonesWatched = 0;
     }
   }
 
