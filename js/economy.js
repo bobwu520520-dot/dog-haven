@@ -524,12 +524,17 @@ class WangwangEconomy {
     return cost === Infinity ? Infinity : cost;
   }
 
-  // 该菜系是否已解锁（按小镇阶段解锁：炖汤 1 / 烧烤 5 / 烘焙 15 / 火锅 30 / 肉干 50）
+  // 该菜系是否已解锁（按小镇等级或对应料理工位解锁：炖汤 1 / 烧烤 5 / 烘焙 15 / 火锅 30 / 肉干 50）
   isRecipeCuisineUnlocked(cuisineId) {
     if (typeof DOG_CUISINES_CONFIG === 'undefined') return true;
     const cuisine = DOG_CUISINES_CONFIG[cuisineId];
     if (!cuisine) return false;
-    return this.townStage >= (cuisine.stage || 1);
+    // 如果对应的料理工位已在后厨解锁，直接视为已解锁
+    if (this.kitchen && cuisine.facilityId && this.kitchen.stations && this.kitchen.stations[cuisine.facilityId]?.unlocked) {
+      return true;
+    }
+    const reqLevel = cuisine.stage || 1;
+    return this.getTownLevel() >= reqLevel || this.townStage >= reqLevel;
   }
 
   // 升级指定料理菜系的食谱
@@ -540,7 +545,7 @@ class WangwangEconomy {
     }
     if (!this.isRecipeCuisineUnlocked(cuisineId)) {
       const cuisine = DOG_CUISINES_CONFIG[cuisineId];
-      return { success: false, msg: `该菜系需小镇 Lv.${cuisine ? cuisine.stage : 1} 解锁哦！` };
+      return { success: false, msg: `该菜系需小镇 Lv.${cuisine ? cuisine.stage : 1} 或解锁对应工位哦！` };
     }
     const cost = this.getRecipeUpgradeCost(cuisineId);
     if (!this.spendGold(cost)) {

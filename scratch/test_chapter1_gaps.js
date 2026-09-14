@@ -141,6 +141,14 @@ assert(Math.abs(bonus - 0.08) < 1e-9, 'Lv.2 食谱提供 +8% 售价加成', `bon
 const locked = game.economy.upgradeRecipe('jerky');
 assert(!locked.success, '未达小镇等级的高阶菜系食谱不可升级', locked.msg);
 
+// 料理工位解锁后对应菜系食谱联动解锁
+assert(!game.economy.isRecipeCuisineUnlocked('bakery'), '工位未解锁时烘焙食谱未解锁');
+game.kitchen.stations.bake.unlocked = true;
+assert(game.economy.isRecipeCuisineUnlocked('bakery'), '烘焙工位解锁后烘焙食谱即刻解锁');
+const bakeUp = game.economy.upgradeRecipe('bakery');
+assert(bakeUp.success, '烘焙工位解锁后烘焙食谱可正常升级', bakeUp.msg);
+game.kitchen.stations.bake.unlocked = false;
+
 // 设施 → 菜系映射完整
 const mapped = ['stew', 'bbq', 'bake', 'hotpot', 'jerky']
   .map(id => `${id}→${game.kitchen.getFacilityCuisineId(id)}`).join(' ');
@@ -249,6 +257,17 @@ const rawSave = JSON.parse(sandbox.localStorage.getItem('wangwang_diner_save'));
 assert(rawSave.recipeLevels.stew === 4, '食谱等级已写入存档', `stew=Lv.${rawSave.recipeLevels.stew}`);
 assert(rawSave.dogs.shiba.coatColorId === coatCfg.shiba[1].id, '毛色已写入存档', rawSave.dogs.shiba.coatColorId);
 assert(Array.isArray(rawSave.ownedCoatIds), '毛色解锁集合已写入存档', `${rawSave.ownedCoatIds.length} 款`);
+
+// 测试老存档加载保留默认服饰与基础免费毛色
+sandbox.localStorage.setItem('wangwang_diner_save', JSON.stringify({
+  ownedOutfits: ['hat_cowboy'],
+  ownedCoatIds: ['coat_golden_2']
+}));
+game.loadSaveData();
+assert(game.wardrobe.ownedOutfitIds.has('hat_chef'), '加载存档后新手主厨帽仍保留');
+assert(game.wardrobe.ownedOutfitIds.has('hat_cowboy'), '加载存档后存档中服饰已恢复');
+assert(game.wardrobe.ownedCoatIds.has(coatCfg.golden[0].id), '加载存档后金毛默认免费毛色仍保留');
+assert(game.wardrobe.ownedCoatIds.has('coat_golden_2'), '加载存档后存档毛色已恢复');
 
 // ---------- F. 渲染烟雾测试 ----------
 console.log('\n[F] 渲染烟雾测试（新增绘制路径不抛异常）');

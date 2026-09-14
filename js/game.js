@@ -2054,14 +2054,18 @@ class WangwangGame {
         }
       }
 
-      // 恢复服装
-      if (data.ownedOutfits) {
-        this.wardrobe.ownedOutfitIds = new Set(data.ownedOutfits);
+      // 恢复服装（保留系统初始赠送）
+      if (Array.isArray(data.ownedOutfits)) {
+        for (const outfitId of data.ownedOutfits) {
+          this.wardrobe.ownedOutfitIds.add(outfitId);
+        }
       }
 
-      // 恢复毛色收集与食谱等级 (GDD 1.2 / 1.3)
-      if (data.ownedCoatIds) {
-        this.wardrobe.ownedCoatIds = new Set(data.ownedCoatIds);
+      // 恢复毛色收集（保留所有犬种默认基础免费毛色）
+      if (Array.isArray(data.ownedCoatIds)) {
+        for (const coatId of data.ownedCoatIds) {
+          this.wardrobe.ownedCoatIds.add(coatId);
+        }
       }
       if (data.recipeLevels) {
         this.economy.recipeLevels = Object.assign(
