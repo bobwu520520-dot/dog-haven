@@ -55,6 +55,7 @@ class WangwangAudio {
   playGrillSizzle() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     // 白噪声源
@@ -84,6 +85,7 @@ class WangwangAudio {
   playWokStir() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     // 铁锅共鸣
@@ -125,6 +127,7 @@ class WangwangAudio {
   playJuicer() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const osc = this.ctx.createOscillator();
@@ -154,6 +157,7 @@ class WangwangAudio {
   playSteamer() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     if (!this.noiseBuffer) this.buildNoiseBuffer();
@@ -182,6 +186,7 @@ class WangwangAudio {
   playOvenDing() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     [1760, 2637].forEach((freq, idx) => {
@@ -206,6 +211,7 @@ class WangwangAudio {
   playCoin() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const notes = [987.77, 1318.51, 1567.98]; // B5, E6, G6
@@ -230,6 +236,7 @@ class WangwangAudio {
   playUpgrade() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
     const chord = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
 
@@ -292,6 +299,7 @@ class WangwangAudio {
   playPetHeart() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const osc = this.ctx.createOscillator();
@@ -313,6 +321,7 @@ class WangwangAudio {
   playFrisbeeWhoosh() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
     if (!this.noiseBuffer) this.buildNoiseBuffer();
 
@@ -343,6 +352,7 @@ class WangwangAudio {
   playDigging() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
     if (!this.noiseBuffer) this.buildNoiseBuffer();
 
@@ -372,6 +382,7 @@ class WangwangAudio {
   playRainDrop() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     const osc = this.ctx.createOscillator();
@@ -394,6 +405,7 @@ class WangwangAudio {
   playGateWelcome() {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
     // 温馨迎门和弦 C大调 (C5, E5, G5, C6)

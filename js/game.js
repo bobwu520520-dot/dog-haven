@@ -593,6 +593,9 @@ class WangwangGame {
         } else {
           // 单击直接触发治愈抚摸互动：高高起跳、高速螺旋甩尾、吐舌萌化与好感度+5
           dog.noticePlayer(true);
+          this.economy.recordAction('pet_dog');
+          this.updateHUD();
+          this.saveGameData();
         }
         return;
       }

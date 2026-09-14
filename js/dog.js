@@ -273,7 +273,7 @@ class DogChef {
   feedSnack() {
     this.addAffectionExp(30, 'snack');
     this.stamina = Math.min(this.maxStamina, this.stamina + 50);
-    if (this.isTired && this.stamina >= 100) {
+    if (this.isTired && this.stamina >= 50) {
       this.isTired = false;
       if (this.restingFromFacility) {
         const fac = this.restingFromFacility;

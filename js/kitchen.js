@@ -394,7 +394,8 @@ class RestaurantKitchen {
     else if (station.level >= 10) maxAvailableIndex = 1;
 
     // 拉布拉多技能：高级菜品出现率提升
-    const hasLabrador = this.economy.hasDog('labrador');
+    const hasLabrador = (this.economy && typeof this.economy.hasDog === 'function')
+      ? this.economy.hasDog('labrador') : false;
     let chosenIndex = station.currentDishIndex;
     if (maxAvailableIndex > 0 && Math.random() < (hasLabrador ? 0.6 : 0.4)) {
       chosenIndex = maxAvailableIndex;
@@ -423,10 +424,12 @@ class RestaurantKitchen {
     }
 
     // 全局提速 (金毛、哈士奇等全局技能)
-    const globalSpeedBonus = this.economy.getGlobalSpeedBonus();
+    const globalSpeedBonus = (this.economy && typeof this.economy.getGlobalSpeedBonus === 'function')
+      ? this.economy.getGlobalSpeedBonus() : 0;
 
     // 广告双倍加速
-    const adSpeedMultiplier = this.economy.isSpeedBoostActive() ? 2.0 : 1.0;
+    const adSpeedMultiplier = (this.economy && typeof this.economy.isSpeedBoostActive === 'function' && this.economy.isSpeedBoostActive())
+      ? 2.0 : 1.0;
 
     const actual = (dish.baseTime * (1 - levelSpeedReduction) * (1 - dogSpeedReduction)) / (1 + globalSpeedBonus);
     return Math.max(0.6, actual / adSpeedMultiplier);
@@ -450,7 +453,8 @@ class RestaurantKitchen {
     }
 
     // 全局售价加成 (如边牧的聪明领班 + 天赋 dish_price 全局部分 + 装扮评分)
-    const globalPriceBonus = this.economy.getGlobalPriceBonus();
+    const globalPriceBonus = (this.economy && typeof this.economy.getGlobalPriceBonus === 'function')
+      ? this.economy.getGlobalPriceBonus() : 0;
 
     // GDD 2.1 天赋被动：**限定菜系**的售价加成（如金毛「汤品大师」全体汤品 +5%）
     let passiveScopedBonus = 0;
@@ -530,12 +534,12 @@ class RestaurantKitchen {
     const mgMul = (this.economy && typeof this.economy.getMinigameMultiplier === 'function')
       ? this.economy.getMinigameMultiplier() : 1;
     const amount = Math.max(1, Math.round(selected.amount * mgMul));
-    selected.amount = amount;
+    const rewardItem = { ...selected, amount };
 
     if (this.economy) {
-      if (selected.type === 'gold') this.economy.addGold(amount);
-      else if (selected.type === 'bone') this.economy.addBones(amount);
-      else if (selected.type === 'snack') this.economy.addSnacks(amount);
+      if (rewardItem.type === 'gold') this.economy.addGold(amount);
+      else if (rewardItem.type === 'bone') this.economy.addBones(amount);
+      else if (rewardItem.type === 'snack') this.economy.addSnacks(amount);
       this.economy.recordAction('park_walk');
     }
 
@@ -543,20 +547,20 @@ class RestaurantKitchen {
     dog.addAffectionExp(cfg.rewardAffection, 'park_walk');
 
     let icon = '🎁';
-    if (selected.type === 'gold') icon = '🪙';
-    else if (selected.type === 'bone') icon = '🦴';
-    else if (selected.type === 'snack') icon = '🥩';
+    if (rewardItem.type === 'gold') icon = '🪙';
+    else if (rewardItem.type === 'bone') icon = '🦴';
+    else if (rewardItem.type === 'snack') icon = '🥩';
 
     this.dogSouvenirs.push({
       x: dog.x,
       y: dog.y - 34,
-      text: `${icon} +${selected.amount} ${selected.desc}`,
+      text: `${icon} +${amount} ${rewardItem.desc}`,
       life: 2.2,
       maxLife: 2.2
     });
 
     if (window.wangwangAudio) window.wangwangAudio.playCoin();
-    return selected;
+    return rewardItem;
   }
 
   // ==================== GDD 1.2 水里捡球 ====================
@@ -656,7 +660,7 @@ class RestaurantKitchen {
     const station = this.stations[stationId];
     if (!station || station.unlocked) return false;
 
-    if (this.economy.spendGold(station.config.unlockCost)) {
+    if (this.economy && this.economy.spendGold(station.config.unlockCost)) {
       station.unlocked = true;
       station.level = 1;
       station.cookTimer = 0;
@@ -690,6 +694,7 @@ class RestaurantKitchen {
     const station = this.stations[stationId];
     if (!station || !station.unlocked || station.level >= 50) return false;
 
+    if (!this.economy) return false;
     const cost = this.economy.getFacilityUpgradeCost(stationId, station.level);
     if (this.economy.spendGold(cost)) {
       station.level++;
@@ -861,7 +866,7 @@ class RestaurantKitchen {
       fc.progress += dt * 2.3;
       if (fc.progress >= 1.0) {
         if (fc.value && fc.value > 0) {
-          this.economy.addGold(fc.value);
+          if (this.economy) this.economy.addGold(fc.value);
         }
         this.flyingCoins.splice(i, 1);
       }
@@ -1033,8 +1038,9 @@ class RestaurantKitchen {
   // 玩家轻点中央音乐喷泉交互：祈愿爆金与水花飞溅
   triggerFountainClick(x, y) {
     if (!this.fountain) return;
-    const earnedGold = Math.max(10, Math.floor(15 * (this.economy.townStage || 1)));
-    this.economy.addGold(earnedGold);
+    const townStage = (this.economy && this.economy.townStage) || 1;
+    const earnedGold = Math.max(10, Math.floor(15 * townStage));
+    if (this.economy) this.economy.addGold(earnedGold);
 
     // 激起欢快水花与金币粒子
     for (let i = 0; i < 14; i++) {
@@ -1128,7 +1134,7 @@ class RestaurantKitchen {
       });
     } else {
       // 托盘已满：自动顺溢售卖并入账（动画金币只做视觉飞舞，不重复加金）
-      this.economy.addGold(price);
+      if (this.economy) this.economy.addGold(price);
       this.flyingCoins.push({
         startX: station.x,
         startY: station.y - 15,
@@ -1171,7 +1177,7 @@ class RestaurantKitchen {
       }
     } else {
       // 盘位被占，顺溢入账（生成飞舞金币粒子与收钱音效）
-      this.economy.addGold(flyingDish.price);
+      if (this.economy) this.economy.addGold(flyingDish.price);
       this.flyingCoins.push({
         startX: plate ? plate.x : 200,
         startY: plate ? plate.y - 12 : 500,
@@ -1192,7 +1198,7 @@ class RestaurantKitchen {
     const dishInfo = plate.dish;
     const price = dishInfo.price;
     plate.dish = null; // 清空盘位
-    this.economy.addGold(price); // 即时入账，防止切出网页或关窗时金币丢失
+    if (this.economy) this.economy.addGold(price); // 即时入账，防止切出网页或关窗时金币丢失
 
     // 播放叮当收钱声
     if (window.wangwangAudio) {
@@ -1213,7 +1219,7 @@ class RestaurantKitchen {
     }
 
     if (isManual) {
-      this.economy.recordAction('collect_coins');
+      if (this.economy) this.economy.recordAction('collect_coins');
       // 弹出金色售卖飘字
       this.floatingTexts.push({
         text: `+${price.toLocaleString()}🪙`,
@@ -2100,7 +2106,7 @@ class RestaurantKitchen {
       ctx.fillStyle = 'rgba(46, 125, 50, 0.24)';
       ctx.fill();
 
-      const isFutureStage = (station.stage || 1) > this.economy.townStage;
+      const isFutureStage = (station.stage || 1) > (this.economy ? (this.economy.townStage || 1) : 1);
       if (isFutureStage) {
         // 未开拓远方林地：晨雾缭绕效果与阶段路标
         ctx.fillStyle = 'rgba(230, 245, 235, 0.78)';

@@ -14,7 +14,8 @@ const SUITES = [
   { file: 'test_chapter1_gaps.js', name: '第 1 章缺口补齐验证（切食材/食谱/毛色/双迷你玩法）' },
   { file: 'test_sprite_portrait.js', name: '写实立绘渲染管线（抠底/包围盒/分支切换/头像一致）' },
   { file: 'test_chapter2_features.js', name: '第 2 章系统（钻石/稀有度/天赋/抽卡保底/传说变体）' },
-  { file: 'test_round6_fixes.js', name: '第 6 轮缺陷修复与任务成就闭环' }
+  { file: 'test_round6_fixes.js', name: '第 6 轮缺陷修复与任务成就闭环' },
+  { file: 'test_round7_fixes.js', name: '第 7 轮缺陷修复与安全性闭环' }
 ];
 
 const results = [];
