@@ -727,6 +727,7 @@ class RestaurantKitchen {
     // 正式上岗
     targetStation.assignedDogId = dogId;
     targetDog.assignedFacility = stationId;
+    targetDog.restingFromFacility = null;
 
     // 设置狗狗在小镇专属岗位的站位坐标，完美契合布局示意图
     const stationOffsets = {
@@ -762,6 +763,7 @@ class RestaurantKitchen {
     if (st) st.assignedDogId = null;
 
     dog.assignedFacility = null;
+    dog.restingFromFacility = null;
     dog.x = 200 + Math.random() * 500;
     dog.y = 180 + Math.random() * 260;
     dog.showBubble('下班去草地玩耍咯~ 呼噜噜~', '💤');
@@ -842,7 +844,9 @@ class RestaurantKitchen {
       const fc = this.flyingCoins[i];
       fc.progress += dt * 2.3;
       if (fc.progress >= 1.0) {
-        this.economy.addGold(fc.value);
+        if (fc.value && fc.value > 0) {
+          this.economy.addGold(fc.value);
+        }
         this.flyingCoins.splice(i, 1);
       }
     }
@@ -1107,14 +1111,14 @@ class RestaurantKitchen {
         stationId: station.id
       });
     } else {
-      // 托盘已满：自动顺溢售卖并入账
+      // 托盘已满：自动顺溢售卖并入账（动画金币只做视觉飞舞，不重复加金）
       this.economy.addGold(price);
       this.flyingCoins.push({
         startX: station.x,
         startY: station.y - 15,
         targetX: 85,
         targetY: 35,
-        value: price,
+        value: 0,
         progress: 0
       });
       if (window.wangwangAudio) window.wangwangAudio.playCoin();
@@ -1163,13 +1167,14 @@ class RestaurantKitchen {
     const dishInfo = plate.dish;
     const price = dishInfo.price;
     plate.dish = null; // 清空盘位
+    this.economy.addGold(price); // 即时入账，防止切出网页或关窗时金币丢失
 
     // 播放叮当收钱声
     if (window.wangwangAudio) {
       window.wangwangAudio.playCoin();
     }
 
-    // 飞出金币粒子动画奔向顶部金币栏
+    // 飞出金币粒子动画奔向顶部金币栏（视觉动画粒子，value=0 避免重复加金）
     const coinSpawns = isManual ? 5 : 3;
     for (let i = 0; i < coinSpawns; i++) {
       this.flyingCoins.push({
@@ -1177,7 +1182,7 @@ class RestaurantKitchen {
         startY: plate.y - 12 + (Math.random() - 0.5) * 12,
         targetX: 85,
         targetY: 35,
-        value: Math.ceil(price / coinSpawns),
+        value: 0,
         progress: -i * 0.07
       });
     }

@@ -137,35 +137,55 @@ class WangwangGame {
     const btnNormal = document.getElementById('btn-claim-offline-normal');
     const btnDouble = document.getElementById('btn-claim-offline-double');
 
-    btnNormal.onclick = () => {
+    let claimed = false;
+    const claimNormal = () => {
+      if (claimed) return;
+      claimed = true;
       this.economy.claimOfflineGold(false, data.earnedGold);
       modal.classList.add('hidden');
       if (golden) golden.welcomePlayerAtGate();
       this.showToast(`已领取小院守候经营金币 +${data.earnedGold.toLocaleString()} 🪙`);
       if (window.wangwangAudio) window.wangwangAudio.playCoin();
+      this.updateHUD();
+      this.saveGameData();
     };
 
-    btnDouble.onclick = () => {
-      // 模拟摸头互动/看广告后双倍领取
-      btnDouble.innerText = '正在摸摸小狗头...';
-      setTimeout(() => {
-        const finalVal = this.economy.claimOfflineGold(true, data.earnedGold);
-        modal.classList.add('hidden');
-        btnDouble.innerText = '📺 摸头互动·双倍领取';
-        if (golden) golden.welcomePlayerAtGate();
-        this.economy.recordAction('watch_ad');
-        this.showToast(`小狗开心翻肚皮！双倍离线金币入账！+${finalVal.toLocaleString()} 🪙✨`);
-        if (window.wangwangAudio) window.wangwangAudio.playUpgrade();
-      }, 1000);
-    };
+    if (btnNormal) {
+      btnNormal.onclick = claimNormal;
+    }
+
+    const closeBtn = modal.querySelector ? modal.querySelector('.modal-close') : null;
+    if (closeBtn) {
+      closeBtn.onclick = claimNormal;
+    }
+
+    if (btnDouble) {
+      btnDouble.onclick = () => {
+        if (claimed) return;
+        claimed = true;
+        btnDouble.innerText = '正在摸摸小狗头...';
+        setTimeout(() => {
+          const finalVal = this.economy.claimOfflineGold(true, data.earnedGold);
+          modal.classList.add('hidden');
+          btnDouble.innerText = '📺 摸头互动·双倍领取';
+          if (golden) golden.welcomePlayerAtGate();
+          this.economy.recordAction('watch_ad');
+          this.showToast(`小狗开心翻肚皮！双倍离线金币入账！+${finalVal.toLocaleString()} 🪙✨`);
+          if (window.wangwangAudio) window.wangwangAudio.playUpgrade();
+          this.updateHUD();
+          this.saveGameData();
+        }, 1000);
+      };
+    }
 
     modal.classList.remove('hidden');
   }
 
   formatDuration(seconds) {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const s = Math.max(0, Math.floor(seconds || 0));
+    const hrs = Math.floor(s / 3600);
+    const mins = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
     if (hrs > 0) return `${hrs}小时 ${mins}分`;
     if (mins > 0) return `${mins}分 ${secs}秒`;
     return `${secs}秒`;
@@ -236,6 +256,24 @@ class WangwangGame {
         const isMuted = window.wangwangAudio.toggleMute();
         btnAudio.innerText = isMuted ? '🔇' : '🎵';
         this.showToast(isMuted ? '音效与BGM已静音' : '音效与治愈BGM已开启');
+        this.saveGameData();
+      });
+    }
+
+    // 页面切出或关闭时自动保存存档
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('beforeunload', () => {
+        this.saveGameData();
+      });
+      window.addEventListener('pagehide', () => {
+        this.saveGameData();
+      });
+    }
+    if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') {
+          this.saveGameData();
+        }
       });
     }
 
@@ -343,7 +381,13 @@ class WangwangGame {
     }
 
     // 关闭各类弹窗
-    const syncNavTabsState = () => {
+    const syncNavTabsState = (closedOverlay) => {
+      if (closedOverlay && closedOverlay.id === 'offline-modal') {
+        const golden = this.dogs.get('golden');
+        if (golden && golden.waitingAtGate) {
+          golden.welcomePlayerAtGate();
+        }
+      }
       const hasOpenModal = Array.from(document.querySelectorAll('.modal-overlay')).some(m => !m.classList.contains('hidden'));
       if (!hasOpenModal) {
         document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
@@ -354,7 +398,7 @@ class WangwangGame {
       btn.addEventListener('click', () => {
         const overlay = btn.closest('.modal-overlay');
         if (overlay) overlay.classList.add('hidden');
-        syncNavTabsState();
+        syncNavTabsState(overlay);
       });
     });
 
@@ -363,7 +407,7 @@ class WangwangGame {
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
           overlay.classList.add('hidden');
-          syncNavTabsState();
+          syncNavTabsState(overlay);
         }
       });
     });
@@ -373,8 +417,9 @@ class WangwangGame {
       if (e.key === 'Escape') {
         const openModals = Array.from(document.querySelectorAll('.modal-overlay:not(.hidden)'));
         if (openModals.length > 0) {
-          openModals[openModals.length - 1].classList.add('hidden');
-          syncNavTabsState();
+          const topModal = openModals[openModals.length - 1];
+          topModal.classList.add('hidden');
+          syncNavTabsState(topModal);
         }
       }
     });
@@ -522,6 +567,13 @@ class WangwangGame {
   // =================== 模态弹窗管理 ===================
 
   closeAllModals() {
+    const offlineModal = document.getElementById('offline-modal');
+    if (offlineModal && !offlineModal.classList.contains('hidden')) {
+      const golden = this.dogs.get('golden');
+      if (golden && golden.waitingAtGate) {
+        golden.welcomePlayerAtGate();
+      }
+    }
     document.querySelectorAll('.modal-overlay').forEach(modal => {
       modal.classList.add('hidden');
     });
@@ -676,6 +728,8 @@ class WangwangGame {
     btnUpgrade.onclick = () => {
       if (this.kitchen.upgradeStation(stationId)) {
         this.openStationModal(stationId); // 刷新
+        this.updateHUD();
+        this.saveGameData();
         this.showToast(`升级成功！制作提速 -4%，菜品售价提升！`);
       } else {
         this.showToast('金币不足！');
@@ -734,6 +788,8 @@ class WangwangGame {
         const id = btn.dataset.id;
         if (this.kitchen.upgradeStation(id)) {
           this.renderFacilitiesList();
+          this.updateHUD();
+          this.saveGameData();
           this.showToast('升级成功！');
         } else {
           this.showToast('金币不足！');
@@ -746,6 +802,8 @@ class WangwangGame {
         const id = btn.dataset.id;
         if (this.kitchen.unlockStation(id)) {
           this.renderFacilitiesList();
+          this.updateHUD();
+          this.saveGameData();
           this.showToast('设施解锁成功！新狗狗已就位！');
         } else {
           this.showToast('金币不足！');
@@ -825,6 +883,8 @@ class WangwangGame {
       } else {
         this.kitchen.assignDogToStation(dog.id, val);
       }
+      this.updateHUD();
+      this.saveGameData();
       this.openDogProfileModal(dog.id);
     };
 
@@ -833,6 +893,8 @@ class WangwangGame {
     btnPet.onclick = () => {
       if (dog.pet()) {
         this.economy.recordAction('pet_dog');
+        this.updateHUD();
+        this.saveGameData();
         this.openDogProfileModal(dog.id);
       } else {
         this.showToast('小狗刚刚被摸过，还在回味呢，等会儿再来吧~');
@@ -846,6 +908,8 @@ class WangwangGame {
     btnFeed.onclick = () => {
       if (this.economy.spendSnack()) {
         dog.feedSnack();
+        this.updateHUD();
+        this.saveGameData();
         this.openDogProfileModal(dog.id);
       } else {
         this.showToast('背包里没有肉干零食啦，可以在集市购买哦！');
@@ -967,6 +1031,8 @@ class WangwangGame {
           this.economy.recordAction('recruit_dog');
           if (window.wangwangAudio) window.wangwangAudio.playUpgrade();
           this.renderDogsRoster();
+          this.updateHUD();
+          this.saveGameData();
           this.showToast(`🎉 欢迎【${dog.name}】加入汪汪小馆！全局技能已生效！`);
         } else {
           this.showToast('金币不足，还不能招募这只小狗哦！');
@@ -1049,6 +1115,8 @@ class WangwangGame {
       btn.onclick = () => {
         this.wardrobe.unequipSlot(this.selectedDogId, btn.dataset.type);
         this.renderWardrobeItems(cat);
+        this.updateHUD();
+        this.saveGameData();
         this.showToast('已卸下服装！');
       };
     });
@@ -1058,6 +1126,8 @@ class WangwangGame {
       btn.onclick = () => {
         this.wardrobe.equipOutfit(this.selectedDogId, btn.dataset.id);
         this.renderWardrobeItems(cat);
+        this.updateHUD();
+        this.saveGameData();
         this.showToast('换装成功！形象已实时更新！');
       };
     });
@@ -1068,6 +1138,8 @@ class WangwangGame {
         const res = this.wardrobe.buyOutfit(btn.dataset.id);
         if (res.success) {
           this.renderWardrobeItems(cat);
+          this.updateHUD();
+          this.saveGameData();
           this.showToast(res.msg);
         } else {
           this.showToast(res.msg);
@@ -1125,6 +1197,8 @@ class WangwangGame {
       btn.onclick = () => {
         const res = this.wardrobe.equipCoatColor(this.selectedDogId, btn.dataset.id);
         this.renderWardrobeItems('coat');
+        this.updateHUD();
+        this.saveGameData();
         this.showToast(res.msg);
       };
     });
@@ -1136,6 +1210,8 @@ class WangwangGame {
         if (res.success) {
           this.wardrobe.equipCoatColor(this.selectedDogId, btn.dataset.id);
           this.renderWardrobeItems('coat');
+          this.updateHUD();
+          this.saveGameData();
         }
       };
     });
@@ -1176,6 +1252,8 @@ class WangwangGame {
       btn.onclick = () => {
         if (this.economy.claimDailyTask(btn.dataset.id)) {
           this.renderTasksUI();
+          this.updateHUD();
+          this.saveGameData();
           this.showToast('骨头奖励已领取！🦴');
         }
       };
@@ -1207,6 +1285,8 @@ class WangwangGame {
       btn.onclick = () => {
         if (this.economy.claimAchievement(btn.dataset.id)) {
           this.renderTasksUI();
+          this.updateHUD();
+          this.saveGameData();
           this.showToast('成就骨头奖励已领取！🦴✨');
         }
       };
@@ -1236,6 +1316,8 @@ class WangwangGame {
       const res = this.wardrobe.drawSingle();
       if (res.success) {
         this.showGachaResults(res.items);
+        this.updateHUD();
+        this.saveGameData();
       } else {
         this.showToast(res.msg);
       }
@@ -1245,6 +1327,8 @@ class WangwangGame {
       const res = this.wardrobe.drawTen();
       if (res.success) {
         this.showGachaResults(res.items);
+        this.updateHUD();
+        this.saveGameData();
       } else {
         this.showToast(res.msg);
       }
@@ -1253,6 +1337,8 @@ class WangwangGame {
     btnBuySnack.onclick = () => {
       if (this.economy.spendGold(1500)) {
         this.economy.addSnacks(1);
+        this.updateHUD();
+        this.saveGameData();
         this.showToast('成功购买 1 包肉干零食！可投喂狗狗增加好感度！🥩');
       } else {
         this.showToast('金币不足（需1500金币/包）！');
@@ -1265,6 +1351,8 @@ class WangwangGame {
         btnAdSpeed.innerText = '⚡ 2分钟双倍制作加速 (免费观看)';
         this.economy.activateSpeedBoost(120);
         this.economy.recordAction('watch_ad');
+        this.updateHUD();
+        this.saveGameData();
         this.showToast('🚀 双倍制作速度已激活！持续 2 分钟！');
         if (window.wangwangAudio) window.wangwangAudio.playUpgrade();
       }, 1000);
@@ -1276,6 +1364,8 @@ class WangwangGame {
         btnAdBones.innerText = '🦴 免费领取 5 骨头 (每日可看3次)';
         this.economy.addBones(5);
         this.economy.recordAction('watch_ad');
+        this.updateHUD();
+        this.saveGameData();
         this.showToast('🎁 获得 5 根骨头！🦴');
         if (window.wangwangAudio) window.wangwangAudio.playCoin();
       }, 1000);
@@ -1319,6 +1409,7 @@ class WangwangGame {
     this.renderDogsRoster();
     this.renderMarketUI();
     this.updateHUD();
+    this.saveGameData();
   }
 
   // 刷新保底进度文案
@@ -1840,7 +1931,10 @@ class WangwangGame {
         // GDD 2.1 抽卡状态：传说变体拥有 + 保底计数 + 统计
         ownedVariantIds: Array.from(this.economy.ownedVariantIds),
         gachaPity: this.economy.gachaPity,
-        gachaStats: this.economy.gachaStats
+        gachaStats: this.economy.gachaStats,
+        // 音频与加速状态持久化
+        audioMuted: window.wangwangAudio ? !!window.wangwangAudio.muted : false,
+        speedBoostEndTime: this.economy.speedBoostEndTime || 0
       };
 
       localStorage.setItem('wangwang_diner_save', JSON.stringify(saveData));
@@ -1864,6 +1958,18 @@ class WangwangGame {
       this.economy.lastSavedTimestamp = data.lastSavedTimestamp || Date.now();
       this.tutorialStep = data.tutorialStep !== undefined ? data.tutorialStep : 0;
       this.economy.townStage = data.townStage || 1;
+
+      // 恢复音频静音状态与制作加速
+      if (data.audioMuted !== undefined && window.wangwangAudio) {
+        window.wangwangAudio.muted = !!data.audioMuted;
+        const btnAudio = document.getElementById('btn-audio-toggle');
+        if (btnAudio) {
+          btnAudio.innerText = window.wangwangAudio.muted ? '🔇' : '🎵';
+        }
+      }
+      if (data.speedBoostEndTime && data.speedBoostEndTime > Date.now()) {
+        this.economy.speedBoostEndTime = data.speedBoostEndTime;
+      }
 
       // GDD 2.1 抽卡状态恢复（老存档缺字段时保持默认，不会清空）
       if (Array.isArray(data.ownedVariantIds)) {

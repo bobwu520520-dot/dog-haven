@@ -70,6 +70,7 @@ class DogChef {
     this.stamina = 100;
     this.maxStamina = 100;
     this.isTired = false;
+    this.restingFromFacility = null; // 疲惫休息前所在的岗位（恢复后自动归位）
     this.playJumpY = 0; // 蹦床跳跃
     this.currentToyId = null;
 
@@ -458,6 +459,7 @@ class DogChef {
       if (this.stamina <= 0 && !this.isTired) {
         this.isTired = true;
         this.showBubble('累扁啦汪~ 去草地休息玩耍！', '💦');
+        this.restingFromFacility = this.assignedFacility;
         this.assignedFacility = null;
         this.x = 240 + Math.random() * 500;
         this.y = 160 + Math.random() * 260;
@@ -470,6 +472,16 @@ class DogChef {
       if (this.isTired && this.stamina >= 100) {
         this.isTired = false;
         this.showBubble('⚡ 活力满满！随时可以掌勺！', '🎉');
+        if (this.restingFromFacility) {
+          const fac = this.restingFromFacility;
+          this.restingFromFacility = null;
+          if (typeof window !== 'undefined' && window.game && window.game.kitchen) {
+            const st = window.game.kitchen.stations[fac];
+            if (st && st.assignedDogId === this.id) {
+              window.game.kitchen.assignDogToStation(this.id, fac);
+            }
+          }
+        }
       }
 
       this.stateTimer -= dt;
