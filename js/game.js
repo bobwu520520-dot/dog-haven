@@ -45,7 +45,7 @@ class WangwangGame {
     this.gacha = new DogGachaManager(this.economy, this.dogs, this.wardrobe);
 
     // 绑定经济系统引用
-    this.economy.bindGameReferences(this.dogs, this.kitchen);
+    this.economy.bindGameReferences(this.dogs, this.kitchen, this.wardrobe);
 
     // 新手引导状态 (0: 引导收金币, 1: 引导升熬汤锅, 2: 引导完成)
     this.tutorialStep = 0;
@@ -150,6 +150,8 @@ class WangwangGame {
       this.saveGameData();
     };
 
+    modal._onClose = claimNormal;
+
     if (btnNormal) {
       btnNormal.onclick = claimNormal;
     }
@@ -221,6 +223,18 @@ class WangwangGame {
     this.canvas.addEventListener('mousedown', handlePointerDown);
     this.canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
 
+    // 全局任意首次交互唤醒 Web Audio
+    const wakeAudioOnFirstGesture = () => {
+      if (window.wangwangAudio) {
+        window.wangwangAudio.init();
+        if (!window.wangwangAudio.bgmPlaying && !window.wangwangAudio.muted) {
+          window.wangwangAudio.startBGM();
+        }
+      }
+    };
+    window.addEventListener('pointerdown', wakeAudioOnFirstGesture, { passive: true });
+    window.addEventListener('keydown', wakeAudioOnFirstGesture, { passive: true });
+
     // 鼠标在画布上移动与悬停：狗狗察觉玩家目光，转向、歪头、摇尾巴打招呼
     this.canvas.addEventListener('mousemove', (e) => {
       const rect = this.canvas.getBoundingClientRect();
@@ -273,6 +287,15 @@ class WangwangGame {
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') {
           this.saveGameData();
+          if (window.wangwangAudio && window.wangwangAudio.bgmPlaying) {
+            window.wangwangAudio._wasPlayingBeforeHide = true;
+            window.wangwangAudio.pauseBGM();
+          }
+        } else if (document.visibilityState === 'visible') {
+          if (window.wangwangAudio && window.wangwangAudio._wasPlayingBeforeHide && !window.wangwangAudio.muted) {
+            window.wangwangAudio._wasPlayingBeforeHide = false;
+            window.wangwangAudio.startBGM();
+          }
         }
       });
     }
@@ -397,7 +420,10 @@ class WangwangGame {
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', () => {
         const overlay = btn.closest('.modal-overlay');
-        if (overlay) overlay.classList.add('hidden');
+        if (overlay) {
+          if (typeof overlay._onClose === 'function') overlay._onClose();
+          overlay.classList.add('hidden');
+        }
         syncNavTabsState(overlay);
       });
     });
@@ -406,6 +432,7 @@ class WangwangGame {
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
+          if (typeof overlay._onClose === 'function') overlay._onClose();
           overlay.classList.add('hidden');
           syncNavTabsState(overlay);
         }
@@ -418,6 +445,7 @@ class WangwangGame {
         const openModals = Array.from(document.querySelectorAll('.modal-overlay:not(.hidden)'));
         if (openModals.length > 0) {
           const topModal = openModals[openModals.length - 1];
+          if (typeof topModal._onClose === 'function') topModal._onClose();
           topModal.classList.add('hidden');
           syncNavTabsState(topModal);
         }
@@ -433,6 +461,8 @@ class WangwangGame {
         const dist = Math.hypot(treasure.x - x, treasure.y - y);
         if (dist <= 30) {
           this.kitchen.collectDugTreasure(treasure, this.economy);
+          this.updateHUD();
+          this.saveGameData();
           return;
         }
       }
@@ -770,9 +800,13 @@ class WangwangGame {
         const dish = this.kitchen.getCurrentDish(station);
         const actualPrice = this.kitchen.calcActualDishPrice(station);
         const actualTime = this.kitchen.calcActualCookTime(station);
+        const assignedDog = station.assignedDogId ? this.dogs.get(station.assignedDogId) : null;
+        const chefStatus = assignedDog
+          ? `${assignedDog.name} ${assignedDog.isTired ? '(小憩中 😴)' : '(掌勺中 👨‍🍳)'}`
+          : '无人掌勺';
         content += `
           <div>当前制作：${dish.icon} ${dish.name} (🪙${actualPrice} / ${actualTime.toFixed(1)}s)</div>
-          <div>在岗厨师：${station.assignedDogId ? this.dogs.get(station.assignedDogId).name : '无人掌勺'}</div>
+          <div>在岗厨师：${chefStatus}</div>
           <button class="btn btn-primary btn-sm btn-upgrade-fac" data-id="${station.id}">
             升级 Lv.${station.level + 1} (🪙${cost.toLocaleString()})
           </button>
@@ -950,6 +984,7 @@ class WangwangGame {
   // 直接 stations[x].config 会在渲染名册时抛异常、整块名册渲染失败。
   // 遇到无效 key 时按「休息中」展示，并把该狗狗的岗位字段纠正为 null。
   getDutyLabel(dog) {
+    if (dog.isTired) return '体力耗尽小憩中 😴';
     const facId = dog.assignedFacility;
     if (!facId) return '乐园休息中 💤';
     const st = this.kitchen && this.kitchen.stations ? this.kitchen.stations[facId] : null;
@@ -1346,51 +1381,59 @@ class WangwangGame {
     }
     this.updateGachaPityUI();
 
-    btnSingle.onclick = () => {
-      const res = this.wardrobe.drawSingle();
-      if (res.success) {
-        this.showGachaResults(res.items);
-        this.updateHUD();
-        this.saveGameData();
-      } else {
-        this.showToast(res.msg);
-      }
-    };
+    if (btnSingle) {
+      btnSingle.onclick = () => {
+        const res = this.wardrobe.drawSingle();
+        if (res.success) {
+          this.showGachaResults(res.items);
+          this.updateHUD();
+          this.saveGameData();
+        } else {
+          this.showToast(res.msg);
+        }
+      };
+    }
 
-    btnTen.onclick = () => {
-      const res = this.wardrobe.drawTen();
-      if (res.success) {
-        this.showGachaResults(res.items);
-        this.updateHUD();
-        this.saveGameData();
-      } else {
-        this.showToast(res.msg);
-      }
-    };
+    if (btnTen) {
+      btnTen.onclick = () => {
+        const res = this.wardrobe.drawTen();
+        if (res.success) {
+          this.showGachaResults(res.items);
+          this.updateHUD();
+          this.saveGameData();
+        } else {
+          this.showToast(res.msg);
+        }
+      };
+    }
 
-    btnBuySnack.onclick = () => {
-      if (this.economy.spendGold(1500)) {
-        this.economy.addSnacks(1);
-        this.updateHUD();
-        this.saveGameData();
-        this.showToast('成功购买 1 包肉干零食！可投喂狗狗增加好感度！🥩');
-      } else {
-        this.showToast('金币不足（需1500金币/包）！');
-      }
-    };
+    if (btnBuySnack) {
+      btnBuySnack.onclick = () => {
+        if (this.economy.spendGold(1500)) {
+          this.economy.addSnacks(1);
+          this.updateHUD();
+          this.saveGameData();
+          this.showToast('成功购买 1 包肉干零食！可投喂狗狗增加好感度！🥩');
+        } else {
+          this.showToast('金币不足（需1500金币/包）！');
+        }
+      };
+    }
 
-    btnAdSpeed.onclick = () => {
-      btnAdSpeed.innerText = '正在观看宣传广告...';
-      setTimeout(() => {
-        btnAdSpeed.innerText = '⚡ 2分钟双倍制作加速 (免费观看)';
-        this.economy.activateSpeedBoost(120);
-        this.economy.recordAction('watch_ad');
-        this.updateHUD();
-        this.saveGameData();
-        this.showToast('🚀 双倍制作速度已激活！持续 2 分钟！');
-        if (window.wangwangAudio) window.wangwangAudio.playUpgrade();
-      }, 1000);
-    };
+    if (btnAdSpeed) {
+      btnAdSpeed.onclick = () => {
+        btnAdSpeed.innerText = '正在观看宣传广告...';
+        setTimeout(() => {
+          btnAdSpeed.innerText = '⚡ 2分钟双倍制作加速 (免费观看)';
+          this.economy.activateSpeedBoost(120);
+          this.economy.recordAction('watch_ad');
+          this.updateHUD();
+          this.saveGameData();
+          this.showToast('🚀 双倍制作速度已激活！持续 2 分钟！');
+          if (window.wangwangAudio) window.wangwangAudio.playUpgrade();
+        }, 1000);
+      };
+    }
 
     const maxBonesAds = 3;
     const bonesWatched = this.economy.dailyAdBonesWatched || 0;
@@ -1468,6 +1511,7 @@ class WangwangGame {
         }
       }
     }
+    this.updateGachaPityUI();
     this.showDogGachaResults(res.results);
     this.renderDogsRoster();
     this.renderMarketUI();
@@ -2037,13 +2081,22 @@ class WangwangGame {
         this.economy.speedBoostEndTime = data.speedBoostEndTime;
       }
 
-      // 恢复每日任务重置日期并立即执行跨天检测
+      // 恢复每日任务与成就（含跨天检测）
       if (data.lastDailyResetDate) {
         this.economy.lastDailyResetDate = data.lastDailyResetDate;
       }
       if (data.dailyAdBonesWatched !== undefined) {
         this.economy.dailyAdBonesWatched = data.dailyAdBonesWatched;
       }
+      if (data.dailyTaskProgress) {
+        this.economy.dailyTaskProgress = Object.assign(
+          { collect_coins: 0, pet_dog: 0, play_toy: 0, upgrade_facility: 0, recruit_dog: 0, watch_ad: 0 },
+          data.dailyTaskProgress
+        );
+      }
+      if (data.claimedTasks) this.economy.claimedTasks = new Set(data.claimedTasks);
+      if (data.unlockedAchievements) this.economy.unlockedAchievements = new Set(data.unlockedAchievements);
+      if (data.claimedAchievements) this.economy.claimedAchievements = new Set(data.claimedAchievements);
       this.economy.checkDailyReset();
 
       // GDD 2.1 抽卡状态恢复（老存档缺字段时保持默认，不会清空）
@@ -2134,19 +2187,16 @@ class WangwangGame {
               for (const [slot, outId] of Object.entries(dData.equippedOutfits)) {
                 if (outId) {
                   const outObj = OUTFITS_CONFIG.find(o => o.id === outId);
-                  if (outObj) dog.equippedOutfits[slot] = outObj;
+                  if (outObj) {
+                    dog.equippedOutfits[slot] = outObj;
+                    dog.wornOutfitIds.add(outId);
+                  }
                 }
               }
             }
           }
         }
       }
-
-      // 恢复任务与成就
-      if (data.dailyTaskProgress) this.economy.dailyTaskProgress = data.dailyTaskProgress;
-      if (data.claimedTasks) this.economy.claimedTasks = new Set(data.claimedTasks);
-      if (data.unlockedAchievements) this.economy.unlockedAchievements = new Set(data.unlockedAchievements);
-      if (data.claimedAchievements) this.economy.claimedAchievements = new Set(data.claimedAchievements);
 
       // 迁移与纠偏：确保金毛、柴犬、萨摩耶、哈士奇等小狗正确定位在各自职业岗位上
       const golden = this.dogs.get('golden');

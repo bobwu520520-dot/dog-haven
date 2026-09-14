@@ -43,6 +43,7 @@ class WangwangEconomy {
     this.dailyTaskProgress = {
       collect_coins: 0,
       pet_dog: 0,
+      play_toy: 0,
       upgrade_facility: 0,
       recruit_dog: 0,
       watch_ad: 0
@@ -61,9 +62,10 @@ class WangwangEconomy {
     this.recipeLevels = { stew: 1, bbq: 1, bakery: 1, hotpot: 1, jerky: 1 };
   }
 
-  bindGameReferences(dogs, kitchen) {
+  bindGameReferences(dogs, kitchen, wardrobe = null) {
     this.dogs = dogs;
     this.kitchen = kitchen;
+    if (wardrobe) this.wardrobe = wardrobe;
   }
 
   // --- 小镇扩张与核心循环相关方法 ---
@@ -658,13 +660,14 @@ class WangwangEconomy {
 
   recordAction(actionType, count = 1) {
     this.checkDailyReset();
-    if (this.dailyTaskProgress[actionType] !== undefined) {
-      this.dailyTaskProgress[actionType] += count;
+    if (this.dailyTaskProgress[actionType] === undefined) {
+      this.dailyTaskProgress[actionType] = 0;
     }
+    this.dailyTaskProgress[actionType] += count;
     if (actionType === 'collect_coins') {
       this.totalCoinsCollected += count;
     }
-    this.checkMilestones();
+    this.checkMilestones(actionType);
   }
 
   checkDailyReset() {
@@ -674,6 +677,7 @@ class WangwangEconomy {
       this.dailyTaskProgress = {
         collect_coins: 0,
         pet_dog: 0,
+        play_toy: 0,
         upgrade_facility: 0,
         recruit_dog: 0,
         watch_ad: 0
@@ -714,9 +718,27 @@ class WangwangEconomy {
     return false;
   }
 
-  checkMilestones() {
+  checkMilestones(actionType = null) {
     if (this.totalGoldEarned >= 100000) {
       this.unlockAchievement('ach_gold_100k');
+    }
+    if (actionType === 'husky_fun') {
+      this.unlockAchievement('ach_husky_fun');
+    }
+    if (this.kitchen && this.kitchen.stations) {
+      if (this.kitchen.stations.stew && this.kitchen.stations.stew.level >= 2) {
+        this.unlockAchievement('ach_first_upgrade');
+      }
+      for (const st of Object.values(this.kitchen.stations)) {
+        if (st.level >= 20) {
+          this.unlockAchievement('ach_auto_collect');
+          break;
+        }
+      }
+    }
+    const w = this.wardrobe || (typeof window !== 'undefined' && window.game ? window.game.wardrobe : null);
+    if (w && w.ownedOutfitIds && w.ownedOutfitIds.size >= 10) {
+      this.unlockAchievement('ach_outfit_10');
     }
     if (this.dogs) {
       let ownedCount = 0;

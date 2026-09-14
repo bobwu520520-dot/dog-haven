@@ -269,12 +269,27 @@ class DogChef {
     return true;
   }
 
-  // 喂食零食 (+30好感)
+  // 喂食零食 (+30好感, +50体力恢复活力)
   feedSnack() {
     this.addAffectionExp(30, 'snack');
+    this.stamina = Math.min(this.maxStamina, this.stamina + 50);
+    if (this.isTired && this.stamina >= 100) {
+      this.isTired = false;
+      if (this.restingFromFacility) {
+        const fac = this.restingFromFacility;
+        this.restingFromFacility = null;
+        const g = (typeof window !== 'undefined') ? (window.game || window.currentGame) : null;
+        if (g && g.kitchen) {
+          const st = g.kitchen.stations[fac];
+          if (st && st.assignedDogId === this.id) {
+            g.kitchen.assignDogToStation(this.id, fac);
+          }
+        }
+      }
+    }
     this.state = 'happy';
     this.stateTimer = 2.5;
-    this.showBubble('肉干太好吃了！汪汪！', '🥩');
+    this.showBubble('肉干太好吃了！体力满满！汪汪！', '🥩');
     if (window.wangwangAudio) {
       window.wangwangAudio.playPetHeart();
       window.wangwangAudio.playBark(this.id);
@@ -479,10 +494,11 @@ class DogChef {
         if (this.restingFromFacility) {
           const fac = this.restingFromFacility;
           this.restingFromFacility = null;
-          if (typeof window !== 'undefined' && window.game && window.game.kitchen) {
-            const st = window.game.kitchen.stations[fac];
+          const g = (typeof window !== 'undefined') ? (window.game || window.currentGame) : null;
+          if (g && g.kitchen) {
+            const st = g.kitchen.stations[fac];
             if (st && st.assignedDogId === this.id) {
-              window.game.kitchen.assignDogToStation(this.id, fac);
+              g.kitchen.assignDogToStation(this.id, fac);
             }
           }
         }
@@ -1536,6 +1552,10 @@ class DogChef {
     } else {
       this.showBubble('哎呀！撞翻晾肉架，倒栽葱栽进肉堆啦！💨', '❓');
     }
+    const eco = (typeof window !== 'undefined')
+      ? ((window.game || window.currentGame) ? (window.game || window.currentGame).economy : null)
+      : null;
+    if (eco) eco.recordAction('husky_fun');
   }
 
   // 与乐园玩具互动 (+20~30体力与+10好感)

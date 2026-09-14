@@ -713,14 +713,15 @@ class RestaurantKitchen {
 
   // 分配狗狗上岗
   assignDogToStation(dogId, stationId) {
+    const id = (typeof dogId === 'object' && dogId !== null) ? dogId.id : dogId;
     const targetStation = this.stations[stationId];
     if (!targetStation || !targetStation.unlocked) return false;
 
-    const targetDog = this.dogs.get(dogId);
+    const targetDog = this.dogs.get(id);
     if (!targetDog || !targetDog.isOwned) return false;
 
     // 如果该设施已有其他狗狗，让原狗狗回到森林草地，避免重叠站位
-    if (targetStation.assignedDogId && targetStation.assignedDogId !== dogId) {
+    if (targetStation.assignedDogId && targetStation.assignedDogId !== id) {
       const prevDog = this.dogs.get(targetStation.assignedDogId);
       if (prevDog) {
         prevDog.assignedFacility = null;
@@ -737,7 +738,7 @@ class RestaurantKitchen {
     }
 
     // 正式上岗
-    targetStation.assignedDogId = dogId;
+    targetStation.assignedDogId = id;
     targetDog.assignedFacility = stationId;
     targetDog.restingFromFacility = null;
 
@@ -790,6 +791,9 @@ class RestaurantKitchen {
       if (station.assignedDogId) {
         const dog = this.dogs.get(station.assignedDogId);
         if (dog) {
+          // 狗狗体力耗尽在草地小憩中，工位暂停烹饪，等待恢复或玩家投喂肉干唤醒
+          if (dog.isTired) continue;
+
           // 被动增加在岗烹饪好感度 (每60秒+1，静默无飘字)
           dog.addAffectionExp((dt / 60) * 1.0, 'cooking', false);
         }

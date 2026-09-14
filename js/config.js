@@ -633,6 +633,7 @@ const ACHIEVEMENTS_CONFIG = [
   { id: 'ach_outfit_10', name: '时尚弄潮儿', desc: '收集并拥有 10 件狗狗服装', target: 10, rewardBones: 35 },
   { id: 'ach_husky_fun', name: '风干房奇遇', desc: '见证哈士奇烘肉干时的搞笑奇遇', target: 1, rewardBones: 20 },
   { id: 'ach_affection_max', name: '心有灵犀', desc: '任意一只狗狗好感度达到 10 级满级', target: 10, rewardBones: 50 },
+  { id: 'ach_gold_100k', name: '日进斗金', desc: '小镇累计营业总收入达到 100,000 金币', target: 100000, rewardBones: 50 },
 ];
 
 // 5 大等级形态小镇开荒与扩张发展阶段配置表 (核心循环驱动主轴)

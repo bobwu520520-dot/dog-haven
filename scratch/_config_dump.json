@@ -505,7 +505,7 @@
       "profession": "火锅主厨",
       "professionIcon": "🫕",
       "avatar": "🐕‍🦺",
-      "image": "assets/art/pomeranian.jpg",
+      "image": "assets/art/border_collie.jpg",
       "recruitCost": 20000,
       "colors": {
         "body": "#2C3E50",
@@ -528,7 +528,7 @@
       "profession": "甜品主厨",
       "professionIcon": "🧁",
       "avatar": "🐕",
-      "image": "assets/art/poodle.jpg",
+      "image": "assets/art/samoyed.jpg",
       "recruitCost": 80000,
       "colors": {
         "body": "#FBFCFC",
@@ -611,6 +611,52 @@
       "baseSkillBonus": 0.2,
       "skillDesc": "生产时高级稀有特产出现概率提升 20%",
       "personality": "细致沉稳的码头领航员，每次出海都能满载珍宝而归。"
+    },
+    "poodle": {
+      "id": "poodle",
+      "name": "贵宾",
+      "title": "金牌造型师",
+      "profession": "造型师",
+      "professionIcon": "✂️",
+      "avatar": "🐩",
+      "image": "assets/art/poodle.jpg",
+      "recruitCost": 40000,
+      "colors": {
+        "body": "#F5EEE6",
+        "belly": "#FFFFFF",
+        "innerEar": "#F5D6C6",
+        "nose": "#34495E",
+        "cheeks": "#FADBD8"
+      },
+      "skillName": "蓬松巧手",
+      "skillType": "local_speed",
+      "targetFacility": null,
+      "baseSkillBonus": 0.15,
+      "skillDesc": "在岗料理工位生产时间缩短 15%（每级好感+1.5%）",
+      "personality": "刚做完造型的时髦贵宾，卷毛蓬松得像一朵云，走到哪都是全场焦点！"
+    },
+    "beagle": {
+      "id": "beagle",
+      "name": "比格",
+      "title": "金牌嗅探员",
+      "profession": "嗅探员",
+      "professionIcon": "👃",
+      "avatar": "🐕",
+      "image": null,
+      "recruitCost": 600000,
+      "colors": {
+        "body": "#F8F9F9",
+        "belly": "#FFFFFF",
+        "innerEar": "#E8B4A0",
+        "nose": "#2C3E50",
+        "cheeks": "#F5CBA7"
+      },
+      "skillName": "雷达鼻",
+      "skillType": "collect_speed",
+      "targetFacility": null,
+      "baseSkillBonus": 0.25,
+      "skillDesc": "全镇金币自动收取间隔缩短 25%（每级好感+2.5%）",
+      "personality": "鼻子比雷达还灵的大垂耳比格，隔着三条街都能闻到刚出炉的肉干香气！"
     }
   },
   "OUTFITS_CONFIG": [
@@ -990,9 +1036,9 @@
     {
       "id": "ach_all_dogs",
       "name": "汪汪全家福",
-      "desc": "集齐小镇全部 8 只明星狗狗居民",
-      "target": 8,
-      "rewardBones": 80
+      "desc": "集齐小镇全部明星狗狗居民",
+      "target": 10,
+      "rewardBones": 120
     },
     {
       "id": "ach_outfit_10",
@@ -1013,6 +1059,13 @@
       "name": "心有灵犀",
       "desc": "任意一只狗狗好感度达到 10 级满级",
       "target": 10,
+      "rewardBones": 50
+    },
+    {
+      "id": "ach_gold_100k",
+      "name": "日进斗金",
+      "desc": "小镇累计营业总收入达到 100,000 金币",
+      "target": 100000,
       "rewardBones": 50
     }
   ],
@@ -1082,7 +1135,8 @@
         "golden",
         "shiba",
         "corgi",
-        "samoyed"
+        "samoyed",
+        "poodle"
       ],
       "unlockedToys": [
         "trampoline",
@@ -1114,9 +1168,11 @@
         "shiba",
         "corgi",
         "samoyed",
+        "poodle",
         "border_collie",
         "husky",
-        "frenchie"
+        "frenchie",
+        "beagle"
       ],
       "unlockedToys": [
         "trampoline",
@@ -1150,9 +1206,11 @@
         "shiba",
         "corgi",
         "samoyed",
+        "poodle",
         "border_collie",
         "husky",
         "frenchie",
+        "beagle",
         "labrador"
       ],
       "unlockedToys": [
@@ -1386,6 +1444,41 @@
       "quirk": "擅长水里捡球与嗅闻寻宝，总能从土里翻出失落的金色大骨头！",
       "welcomeQuote": "主人，今天码头风平浪静，这是我从海滩刨出的宝藏！汪！",
       "badge": "金色航海家"
+    },
+    "poodle": {
+      "breedId": "poodle",
+      "name": "贵宾犬（泰迪）",
+      "alias": "时尚造型师 / 蓬松小云朵",
+      "origin": "德国（后盛行于法国）",
+      "temperament": "聪明机敏、优雅粘人、极度爱美",
+      "colors": [
+        "奶油白",
+        "杏色",
+        "银灰",
+        "香槟金"
+      ],
+      "favoriteDish": "莓果酸奶杯 🥛",
+      "favoriteDishId": "bake_2",
+      "quirk": "每天都要照三遍镜子，出门前必须把卷毛抖得蓬蓬的才肯走！",
+      "welcomeQuote": "主人你看！我今天的新造型是不是全镇最时髦的？汪呜～",
+      "badge": "小馆时尚总监"
+    },
+    "beagle": {
+      "breedId": "beagle",
+      "name": "比格犬",
+      "alias": "嗅探员 / 大垂耳雷达",
+      "origin": "英国",
+      "temperament": "活泼好奇、嗅觉超群、贪吃但极忠诚",
+      "colors": [
+        "黑褐白三色",
+        "柠檬白",
+        "红白"
+      ],
+      "favoriteDish": "香烤鸡肉串 🍢",
+      "favoriteDishId": "bbq_2",
+      "quirk": "鼻子永远贴在地上，隔着三条街都能锁定刚出炉的肉干香气！",
+      "welcomeQuote": "汪！我闻到你回来啦——从街角就闻到啦！",
+      "badge": "金牌嗅探员"
     }
   },
   "PARK_ACTIVITIES_CONFIG": {
@@ -1776,6 +1869,82 @@
           "innerEar": "#D9BE86"
         },
         "desc": "温柔米黄的暖色调毛色，亲和力满分。"
+      }
+    ],
+    "poodle": [
+      {
+        "id": "coat_poodle_1",
+        "name": "奶油白",
+        "costType": "free",
+        "cost": 0,
+        "colors": {
+          "body": "#F5EEE6",
+          "belly": "#FFFFFF",
+          "innerEar": "#F5D6C6"
+        },
+        "desc": "贵宾最经典的蓬松奶油白卷毛。"
+      },
+      {
+        "id": "coat_poodle_2",
+        "name": "香槟金",
+        "costType": "gold",
+        "cost": 3500,
+        "colors": {
+          "body": "#E8C89A",
+          "belly": "#FFF8EC",
+          "innerEar": "#D4AC78"
+        },
+        "desc": "带香槟光泽的暖金色卷毛，高级感十足。"
+      },
+      {
+        "id": "coat_poodle_3",
+        "name": "银灰云",
+        "costType": "bone",
+        "cost": 30,
+        "colors": {
+          "body": "#C8CCD0",
+          "belly": "#F7F9FA",
+          "innerEar": "#AAB2B8"
+        },
+        "desc": "如云朵般柔和的稀有银灰卷毛。"
+      }
+    ],
+    "beagle": [
+      {
+        "id": "coat_beagle_1",
+        "name": "黑褐白三色",
+        "costType": "free",
+        "cost": 0,
+        "colors": {
+          "body": "#F8F9F9",
+          "belly": "#FFFFFF",
+          "innerEar": "#E8B4A0"
+        },
+        "desc": "比格标志性的黑褐白三色大垂耳。"
+      },
+      {
+        "id": "coat_beagle_2",
+        "name": "柠檬白",
+        "costType": "gold",
+        "cost": 3500,
+        "colors": {
+          "body": "#FAF3DC",
+          "belly": "#FFFDF5",
+          "innerEar": "#E6CE9E"
+        },
+        "desc": "清爽的柠檬白配色，罕见又温柔。"
+      },
+      {
+        "id": "coat_beagle_3",
+        "name": "红白双色",
+        "costType": "bone",
+        "cost": 28,
+        "colors": {
+          "body": "#D98862",
+          "belly": "#FFF6F0",
+          "innerEar": "#C4703F"
+        },
+        "desc": "温暖的红白双色，像秋日午后的阳光。"
       }
     ]
   },

@@ -18,11 +18,13 @@ class WangwangAudio {
   init() {
     if (!this.ctx) {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      this.ctx = new AudioCtx();
-      this.buildNoiseBuffer();
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+        this.buildNoiseBuffer();
+      }
     }
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
     }
   }
 
@@ -251,14 +253,23 @@ class WangwangAudio {
   playBark(breed = 'shiba') {
     if (this.muted) return;
     this.init();
+    if (!this.ctx) return;
     const now = this.ctx.currentTime;
 
-    // 不同犬种音调各异（柯基清脆，哈士奇低沉，萨摩耶治愈）
-    let baseFreq = 480;
-    if (breed === 'corgi') baseFreq = 620;
-    else if (breed === 'husky') baseFreq = 340;
-    else if (breed === 'golden') baseFreq = 380;
-    else if (breed === 'frenchie') baseFreq = 320;
+    // 10 大国民犬种音调各异（柯基清脆、哈士奇低沉、萨摩耶空灵、金毛暖心等）
+    const breedPitches = {
+      golden: 380,
+      labrador: 390,
+      shiba: 480,
+      corgi: 620,
+      samoyed: 520,
+      husky: 340,
+      border_collie: 500,
+      poodle: 580,
+      frenchie: 310,
+      beagle: 440
+    };
+    const baseFreq = breedPitches[breed] || 480;
 
     const osc = this.ctx.createOscillator();
     osc.type = 'triangle';
@@ -413,6 +424,7 @@ class WangwangAudio {
   startBGM() {
     if (this.bgmPlaying || this.muted) return;
     this.init();
+    if (!this.ctx) return;
     this.bgmPlaying = true;
 
     const chords = [
@@ -426,7 +438,7 @@ class WangwangAudio {
     let noteIdx = 0;
 
     const playGuitarPluck = () => {
-      if (!this.bgmPlaying || this.muted) return;
+      if (!this.bgmPlaying || this.muted || !this.ctx) return;
 
       const currentChord = chords[chordIdx];
       const freq = currentChord[noteIdx];
@@ -463,7 +475,15 @@ class WangwangAudio {
       this.bgmTimer = setTimeout(playGuitarPluck, 450);
     };
 
-    playGuitarPluck();
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().then(() => {
+        if (this.bgmPlaying && !this.muted && !this.bgmTimer) {
+          playGuitarPluck();
+        }
+      }).catch(() => {});
+    } else {
+      playGuitarPluck();
+    }
   }
 
   pauseBGM() {
