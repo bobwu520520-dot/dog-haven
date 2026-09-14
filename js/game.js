@@ -667,6 +667,7 @@ class WangwangGame {
       }
       this.kitchen.triggerTownExpansionCelebration(res.newStage.name);
       this.showToast(`🌟 成功开拓新林地【${res.newStage.name}】！获得 🦴+${res.rewardBones} 骨头！`);
+      this.updateHUD();
       this.saveGameData();
     }
   }
@@ -843,7 +844,7 @@ class WangwangGame {
 
     // 好感度经验条
     const reqExp = dog.getRequiredExp();
-    const percent = Math.min(100, Math.floor((dog.affectionExp / reqExp) * 100));
+    const percent = dog.affectionLevel >= 10 ? 100 : Math.min(100, Math.floor((dog.affectionExp / reqExp) * 100));
     document.getElementById('dog-modal-affection-level').innerText = `好感度等级 Lv.${dog.affectionLevel} / 10`;
     document.getElementById('dog-modal-exp-bar').style.width = `${percent}%`;
     document.getElementById('dog-modal-exp-text').innerText = dog.affectionLevel >= 10 ? 'MAX 满级' : `${Math.floor(dog.affectionExp)} / ${reqExp} EXP`;
@@ -890,6 +891,15 @@ class WangwangGame {
 
     // 互动按钮：抚摸 (CD 30s)
     const btnPet = document.getElementById('btn-dog-pet');
+    const now = Date.now();
+    const remainPetCd = Math.max(0, Math.ceil((30 * 1000 - (now - dog.lastPetTime)) / 1000));
+    if (remainPetCd > 0) {
+      btnPet.innerHTML = `🐾 抚摸小狗 (+5好感, 需等${remainPetCd}秒)`;
+      btnPet.disabled = true;
+    } else {
+      btnPet.innerHTML = `🐾 抚摸小狗 (+5好感, CD 30秒)`;
+      btnPet.disabled = false;
+    }
     btnPet.onclick = () => {
       if (dog.pet()) {
         this.economy.recordAction('pet_dog');
@@ -903,8 +913,13 @@ class WangwangGame {
 
     // 互动按钮：喂食肉干 (+30 好感)
     const btnFeed = document.getElementById('btn-dog-feed');
-    btnFeed.innerHTML = `🥩 喂食肉干零食 (+30好感, 剩余: ${this.economy.snacks}包)`;
-    btnFeed.disabled = this.economy.snacks <= 0 || dog.affectionLevel >= 10;
+    if (dog.affectionLevel >= 10) {
+      btnFeed.innerHTML = `🥩 好感度已满级 (MAX)`;
+      btnFeed.disabled = true;
+    } else {
+      btnFeed.innerHTML = `🥩 喂食肉干零食 (+30好感, 剩余: ${this.economy.snacks}包)`;
+      btnFeed.disabled = this.economy.snacks <= 0;
+    }
     btnFeed.onclick = () => {
       if (this.economy.spendSnack()) {
         dog.feedSnack();
@@ -1029,6 +1044,12 @@ class WangwangGame {
         if (this.economy.spendGold(dog.config.recruitCost)) {
           dog.isOwned = true;
           this.economy.recordAction('recruit_dog');
+          if (dog.config && dog.config.targetFacility) {
+            const st = this.kitchen.stations[dog.config.targetFacility];
+            if (st && st.unlocked && !st.assignedDogId) {
+              this.kitchen.assignDogToStation(dog.id, dog.config.targetFacility);
+            }
+          }
           if (window.wangwangAudio) window.wangwangAudio.playUpgrade();
           this.renderDogsRoster();
           this.updateHUD();
@@ -1219,6 +1240,7 @@ class WangwangGame {
 
   // --- 每日任务与成就 UI ---
   renderTasksUI() {
+    this.economy.checkDailyReset();
     const dailyContainer = document.getElementById('daily-tasks-list');
     const achContainer = document.getElementById('achievements-list');
 
@@ -1404,6 +1426,18 @@ class WangwangGame {
     if (!res.success) {
       this.showToast(res.msg);
       return;
+    }
+    // 检查新招募的狗狗是否可直接填补已解锁且空缺的专属岗位
+    for (const r of res.results) {
+      if (r.isNew && r.entry.kind === 'dog') {
+        const d = this.dogs.get(r.entry.id);
+        if (d && d.config && d.config.targetFacility) {
+          const st = this.kitchen.stations[d.config.targetFacility];
+          if (st && st.unlocked && !st.assignedDogId) {
+            this.kitchen.assignDogToStation(d.id, d.config.targetFacility);
+          }
+        }
+      }
     }
     this.showDogGachaResults(res.results);
     this.renderDogsRoster();
@@ -1926,6 +1960,7 @@ class WangwangGame {
         recipeLevels: this.economy.recipeLevels,
         dailyTaskProgress: this.economy.dailyTaskProgress,
         claimedTasks: Array.from(this.economy.claimedTasks),
+        lastDailyResetDate: this.economy.lastDailyResetDate,
         unlockedAchievements: Array.from(this.economy.unlockedAchievements),
         claimedAchievements: Array.from(this.economy.claimedAchievements),
         // GDD 2.1 抽卡状态：传说变体拥有 + 保底计数 + 统计
@@ -1970,6 +2005,12 @@ class WangwangGame {
       if (data.speedBoostEndTime && data.speedBoostEndTime > Date.now()) {
         this.economy.speedBoostEndTime = data.speedBoostEndTime;
       }
+
+      // 恢复每日任务重置日期并立即执行跨天检测
+      if (data.lastDailyResetDate) {
+        this.economy.lastDailyResetDate = data.lastDailyResetDate;
+      }
+      this.economy.checkDailyReset();
 
       // GDD 2.1 抽卡状态恢复（老存档缺字段时保持默认，不会清空）
       if (Array.isArray(data.ownedVariantIds)) {

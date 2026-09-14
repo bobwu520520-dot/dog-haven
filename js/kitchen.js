@@ -661,12 +661,20 @@ class RestaurantKitchen {
       station.level = 1;
       station.cookTimer = 0;
 
-      // 自动分配一个在森林草地休息的空闲狗狗来上岗
+      // 优先分配对口专业的专职狗狗，其次分配其他空闲狗狗（柯基为全局跑堂不优先分配主厨位）
+      let candidateDog = null;
       for (const dog of this.dogs.values()) {
         if (dog.isOwned && !dog.assignedFacility) {
-          this.assignDogToStation(dog.id, stationId);
-          break;
+          if (dog.config && dog.config.targetFacility === stationId) {
+            candidateDog = dog;
+            break;
+          } else if (!candidateDog && dog.id !== 'corgi') {
+            candidateDog = dog;
+          }
         }
+      }
+      if (candidateDog) {
+        this.assignDogToStation(candidateDog.id, stationId);
       }
 
       if (window.wangwangAudio) {
@@ -711,11 +719,15 @@ class RestaurantKitchen {
     const targetDog = this.dogs.get(dogId);
     if (!targetDog || !targetDog.isOwned) return false;
 
-    // 如果该设施已有狗狗，让原狗狗回到森林草地
-    if (targetStation.assignedDogId) {
+    // 如果该设施已有其他狗狗，让原狗狗回到森林草地，避免重叠站位
+    if (targetStation.assignedDogId && targetStation.assignedDogId !== dogId) {
       const prevDog = this.dogs.get(targetStation.assignedDogId);
       if (prevDog) {
         prevDog.assignedFacility = null;
+        prevDog.restingFromFacility = null;
+        prevDog.x = 200 + Math.random() * 400;
+        prevDog.y = 180 + Math.random() * 200;
+        prevDog.showBubble('换班啦，去草地玩会儿~ 🐾', '💤');
       }
     }
 
@@ -1154,8 +1166,17 @@ class RestaurantKitchen {
         }, 400);
       }
     } else {
-      // 盘位被占，顺溢入账
+      // 盘位被占，顺溢入账（生成飞舞金币粒子与收钱音效）
       this.economy.addGold(flyingDish.price);
+      this.flyingCoins.push({
+        startX: plate ? plate.x : 200,
+        startY: plate ? plate.y - 12 : 500,
+        targetX: 85,
+        targetY: 35,
+        value: 0,
+        progress: 0
+      });
+      if (window.wangwangAudio) window.wangwangAudio.playCoin();
     }
   }
 
